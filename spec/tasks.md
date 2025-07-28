@@ -3121,63 +3121,1252 @@ This document contains a comprehensive checklist of tasks needed to implement th
   - Error and validation feedback
   - Preview data formatting
 
-## Error Handling and Validation
+## React Error Handling and Validation
 
-### Input Validation
-- [ ] Validate PNG file uploads
-- [ ] Check image dimensions and file size limits
-- [ ] Validate coordinate inputs are within image bounds
-- [ ] Ensure required fields are filled before export
-- [ ] Validate that lines are placed in logical order
+### Error Boundary Component
+- [ ] **Create React Error Boundary for graceful error handling**
+  ```jsx
+  // src/components/ErrorBoundary.jsx
+  import React from 'react';
+  
+  class ErrorBoundary extends React.Component {
+    constructor(props) {
+      super(props);
+      this.state = { hasError: false, error: null, errorInfo: null };
+    }
+    
+    static getDerivedStateFromError(error) {
+      return { hasError: true };
+    }
+    
+    componentDidCatch(error, errorInfo) {
+      this.setState({
+        error: error,
+        errorInfo: errorInfo
+      });
+      
+      // Log error for debugging
+      console.error('Application Error:', error, errorInfo);
+    }
+    
+    render() {
+      if (this.state.hasError) {
+        return (
+          <div className="error-boundary">
+            <div className="error-container">
+              <h2>Something went wrong</h2>
+              <p>The application encountered an unexpected error. Please refresh the page to try again.</p>
+              
+              {process.env.NODE_ENV === 'development' && (
+                <details className="error-details">
+                  <summary>Error Details (Development Mode)</summary>
+                  <pre>{this.state.error && this.state.error.toString()}</pre>
+                  <pre>{this.state.errorInfo.componentStack}</pre>
+                </details>
+              )}
+              
+              <button 
+                onClick={() => window.location.reload()}
+                className="btn btn-primary"
+              >
+                Refresh Page
+              </button>
+            </div>
+          </div>
+        );
+      }
+      
+      return this.props.children;
+    }
+  }
+  
+  export default ErrorBoundary;
+  ```
+  - Catches JavaScript errors in React component tree
+  - Provides fallback UI with recovery options
+  - Logs errors for debugging in development mode
 
-### Error Messages
-- [ ] Display user-friendly error messages
-- [ ] Handle canvas context errors
-- [ ] Handle file reading errors
-- [ ] Handle export errors
-- [ ] Provide clear instructions for fixing errors
+### Input Validation Hook
+- [ ] **Create comprehensive useValidation hook**
+  ```jsx
+  // src/hooks/useValidation.js
+  import { useCallback, useState, useEffect } from 'react';
+  
+  export const useValidation = () => {
+    const [errors, setErrors] = useState({});
+    const [warnings, setWarnings] = useState({});
+    
+    const validateFile = useCallback((file) => {
+      const fileErrors = [];
+      
+      if (!file) {
+        fileErrors.push('No file selected');
+        return { isValid: false, errors: fileErrors };
+      }
+      
+      // Check file type
+      if (file.type !== 'image/png') {
+        fileErrors.push('File must be a PNG image');
+      }
+      
+      // Check file size (10MB limit)
+      const maxSize = 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        fileErrors.push(`File size (${formatFileSize(file.size)}) exceeds limit (${formatFileSize(maxSize)})`);
+      }
+      
+      // Check if file is corrupted (basic check)
+      if (file.size === 0) {
+        fileErrors.push('File appears to be corrupted or empty');
+      }
+      
+      return {
+        isValid: fileErrors.length === 0,
+        errors: fileErrors
+      };
+    }, []);
+    
+    const validateImageDimensions = useCallback((width, height) => {
+      const dimensionErrors = [];
+      const dimensionWarnings = [];
+      
+      // Minimum dimensions
+      if (width < 50 || height < 50) {
+        dimensionErrors.push('Image dimensions too small (minimum 50x50 pixels)');
+      }
+      
+      // Maximum dimensions (for performance)
+      if (width > 4000 || height > 4000) {
+        dimensionWarnings.push('Large image dimensions may affect performance');
+      }
+      
+      // Aspect ratio warnings
+      const aspectRatio = width / height;
+      if (aspectRatio > 3 || aspectRatio < 0.33) {
+        dimensionWarnings.push('Unusual aspect ratio detected');
+      }
+      
+      return {
+        isValid: dimensionErrors.length === 0,
+        errors: dimensionErrors,
+        warnings: dimensionWarnings
+      };
+    }, []);
+    
+    const validateCoordinates = useCallback((lines, imageWidth, imageHeight) => {
+      const coordErrors = [];
+      
+      // Check required coordinates
+      if (lines.headerEnd === null) {
+        coordErrors.push('Header end line is required');
+      }
+      
+      if (lines.footerStart === null) {
+        coordErrors.push('Footer start line is required');
+      }
+      
+      if (lines.textLine === null) {
+        coordErrors.push('Text line is required');
+      }
+      
+      // Check bounds
+      Object.entries(lines).forEach(([lineType, value]) => {
+        if (value === null || lineType === 'letterLines') return;
+        
+        const isVertical = ['leftStart', 'rightStart'].includes(lineType);
+        const maxValue = isVertical ? imageWidth : imageHeight;
+        
+        if (value < 0 || value > maxValue) {
+          coordErrors.push(`${lineType} coordinate (${value}) is out of bounds (0-${maxValue})`);
+        }
+      });
+      
+      // Check logical order
+      if (lines.headerEnd !== null && lines.footerStart !== null) {
+        if (lines.headerEnd >= lines.footerStart) {
+          coordErrors.push('Header end must be above footer start');
+        }
+      }
+      
+      if (lines.textLine !== null) {
+        if (lines.headerEnd !== null && lines.textLine <= lines.headerEnd) {
+          coordErrors.push('Text line must be below header end');
+        }
+        if (lines.footerStart !== null && lines.textLine >= lines.footerStart) {
+          coordErrors.push('Text line must be above footer start');
+        }
+      }
+      
+      if (lines.leftStart !== null && lines.rightStart !== null) {
+        if (lines.leftStart >= lines.rightStart) {
+          coordErrors.push('Left start must be left of right start');
+        }
+      }
+      
+      return {
+        isValid: coordErrors.length === 0,
+        errors: coordErrors
+      };
+    }, []);
+    
+    const validateExportReadiness = useCallback((appState) => {
+      const exportErrors = [];
+      
+      if (!appState.ui.name.trim()) {
+        exportErrors.push('Stamp name is required');
+      }
+      
+      if (!appState.image.canvas) {
+        exportErrors.push('No image loaded');
+      }
+      
+      if (!appState.settings.backgroundRemoved) {
+        exportErrors.push('Background removal is required');
+      }
+      
+      // Validate coordinates
+      const coordValidation = validateCoordinates(
+        appState.lines, 
+        appState.image.width, 
+        appState.image.height
+      );
+      
+      exportErrors.push(...coordValidation.errors);
+      
+      return {
+        isValid: exportErrors.length === 0,
+        errors: exportErrors
+      };
+    }, [validateCoordinates]);
+    
+    const clearErrors = useCallback((field) => {
+      if (field) {
+        setErrors(prev => ({ ...prev, [field]: null }));
+        setWarnings(prev => ({ ...prev, [field]: null }));
+      } else {
+        setErrors({});
+        setWarnings({});
+      }
+    }, []);
+    
+    const setFieldError = useCallback((field, error) => {
+      setErrors(prev => ({ ...prev, [field]: error }));
+    }, []);
+    
+    const setFieldWarning = useCallback((field, warning) => {
+      setWarnings(prev => ({ ...prev, [field]: warning }));
+    }, []);
+    
+    return {
+      errors,
+      warnings,
+      validateFile,
+      validateImageDimensions,
+      validateCoordinates,
+      validateExportReadiness,
+      clearErrors,
+      setFieldError,
+      setFieldWarning
+    };
+  };
+  
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+  ```
+  - Comprehensive validation for all input types
+  - Real-time error and warning management
+  - Bounds checking and logical validation
 
-## User Experience Enhancements
+### Error Display Components
+- [ ] **Create reusable error display components**
+  ```jsx
+  // src/components/ErrorDisplay.jsx
+  import React from 'react';
+  
+  export const ErrorMessage = ({ error, onDismiss }) => {
+    if (!error) return null;
+    
+    return (
+      <div className="error-message">
+        <span className="error-icon">⚠️</span>
+        <span className="error-text">{error}</span>
+        {onDismiss && (
+          <button 
+            onClick={onDismiss}
+            className="error-dismiss"
+            aria-label="Dismiss error"
+          >
+            ×
+          </button>
+        )}
+      </div>
+    );
+  };
+  
+  export const WarningMessage = ({ warning, onDismiss }) => {
+    if (!warning) return null;
+    
+    return (
+      <div className="warning-message">
+        <span className="warning-icon">⚡</span>
+        <span className="warning-text">{warning}</span>
+        {onDismiss && (
+          <button 
+            onClick={onDismiss}
+            className="warning-dismiss"
+            aria-label="Dismiss warning"
+          >
+            ×
+          </button>
+        )}
+      </div>
+    );
+  };
+  
+  export const ValidationSummary = ({ errors, warnings }) => {
+    if (!errors?.length && !warnings?.length) return null;
+    
+    return (
+      <div className="validation-summary">
+        {errors?.length > 0 && (
+          <div className="validation-errors">
+            <h4>Please fix the following errors:</h4>
+            <ul>
+              {errors.map((error, index) => (
+                <li key={index}>{error}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        {warnings?.length > 0 && (
+          <div className="validation-warnings">
+            <h4>Warnings:</h4>
+            <ul>
+              {warnings.map((warning, index) => (
+                <li key={index}>{warning}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    );
+  };
+  ```
+  - Reusable error and warning components
+  - Dismissible messages with accessibility
+  - Validation summary for multiple issues
 
-### Visual Feedback
-- [ ] Show active mode indicators on buttons
-- [ ] Display current coordinates in real-time
-- [ ] Show progress indicators for long operations
-- [ ] Highlight invalid inputs with visual cues
-- [ ] Show success messages after successful operations
+### Error Handling Utilities
+- [ ] **Create error handling utilities**
+  ```jsx
+  // src/utils/errorHandling.js
+  
+  export const handleAsyncError = async (asyncFunction, errorCallback) => {
+    try {
+      return await asyncFunction();
+    } catch (error) {
+      console.error('Async operation failed:', error);
+      if (errorCallback) {
+        errorCallback(error);
+      }
+      throw error;
+    }
+  };
+  
+  export const handleCanvasError = (canvas, fallbackMessage = 'Canvas operation failed') => {
+    if (!canvas) {
+      throw new Error('Canvas element not found');
+    }
+    
+    const context = canvas.getContext('2d');
+    if (!context) {
+      throw new Error('Could not get 2D rendering context');
+    }
+    
+    return context;
+  };
+  
+  export const handleFileError = (file, validationResult) => {
+    if (!validationResult.isValid) {
+      const errorMessage = validationResult.errors.join('; ');
+      throw new Error(`File validation failed: ${errorMessage}`);
+    }
+  };
+  
+  export const createUserFriendlyError = (error) => {
+    // Convert technical errors to user-friendly messages
+    const errorMap = {
+      'NetworkError': 'Network connection failed. Please check your internet connection.',
+      'QuotaExceededError': 'Storage quota exceeded. Please free up some space.',
+      'SecurityError': 'Security restriction encountered. Please check file permissions.',
+      'NotSupportedError': 'This operation is not supported by your browser.',
+      'InvalidStateError': 'Invalid operation state. Please refresh and try again.'
+    };
+    
+    const errorType = error.name || error.constructor.name;
+    return errorMap[errorType] || error.message || 'An unexpected error occurred';
+  };
+  
+  export const logError = (error, context = '') => {
+    const timestamp = new Date().toISOString();
+    const logEntry = {
+      timestamp,
+      context,
+      error: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      }
+    };
+    
+    console.error('Application Error:', logEntry);
+    
+    // In production, you might want to send this to an error tracking service
+    if (process.env.NODE_ENV === 'production') {
+      // Example: sendToErrorTrackingService(logEntry);
+    }
+  };
+  ```
+  - Async error handling utilities
+  - Canvas-specific error handling
+  - User-friendly error message conversion
+  - Error logging and tracking
 
-### Accessibility
-- [ ] Add proper ARIA labels to all interactive elements
-- [ ] Ensure keyboard navigation works for all controls
-- [ ] Add alt text and descriptions where appropriate
-- [ ] Test with screen readers
-- [ ] Ensure sufficient color contrast
+## React User Experience Enhancements
 
-## Testing and Quality Assurance
+### Visual Feedback Components
+- [ ] **Create StatusIndicator component for real-time feedback**
+  ```jsx
+  // src/components/StatusIndicator.jsx
+  import React from 'react';
+  
+  export const StatusIndicator = ({ appState }) => {
+    const getStatus = () => {
+      if (!appState.image.file) {
+        return { text: 'Upload an image to begin', color: '#6c757d', icon: '📁' };
+      }
+      
+      if (!appState.settings.backgroundRemoved) {
+        return { text: 'Remove background to continue', color: '#ffc107', icon: '🎨' };
+      }
+      
+      const requiredLines = ['headerEnd', 'footerStart', 'textLine'];
+      const missingLines = requiredLines.filter(line => appState.lines[line] === null);
+      
+      if (missingLines.length > 0) {
+        return { 
+          text: `Select ${missingLines.length} required line${missingLines.length > 1 ? 's' : ''}`, 
+          color: '#fd7e14', 
+          icon: '📏' 
+        };
+      }
+      
+      if (!appState.ui.name.trim()) {
+        return { text: 'Enter stamp name to export', color: '#20c997', icon: '✏️' };
+      }
+      
+      return { text: 'Ready to export!', color: '#28a745', icon: '✅' };
+    };
+    
+    const status = getStatus();
+    
+    return (
+      <div className="status-indicator" style={{ color: status.color }}>
+        <span className="status-icon">{status.icon}</span>
+        <span className="status-text">{status.text}</span>
+      </div>
+    );
+  };
+  
+  export const ProgressIndicator = ({ isVisible, progress, message }) => {
+    if (!isVisible) return null;
+    
+    return (
+      <div className="progress-indicator">
+        <div className="progress-message">{message}</div>
+        <div className="progress-bar">
+          <div 
+            className="progress-fill" 
+            style={{ width: `${progress}%` }}
+          ></div>
+        </div>
+        <div className="progress-percentage">{Math.round(progress)}%</div>
+      </div>
+    );
+  };
+  
+  export const CoordinateDisplay = ({ appState }) => {
+    if (!appState.ui.zoomVisible || !appState.ui.zoomPosition) {
+      return null;
+    }
+    
+    return (
+      <div className="coordinate-display">
+        <div className="coordinate-item">
+          <label>X:</label>
+          <span>{appState.ui.zoomPosition.x}</span>
+        </div>
+        <div className="coordinate-item">
+          <label>Y:</label>
+          <span>{appState.ui.zoomPosition.y}</span>
+        </div>
+      </div>
+    );
+  };
+  ```
+  - Real-time status updates based on application state
+  - Progress indicators for long operations
+  - Live coordinate display during interactions
 
-### Functional Testing
-- [ ] Test file upload with various PNG files
-- [ ] Test background removal with different colors
-- [ ] Test all line selection modes
-- [ ] Test manual input synchronization
-- [ ] Test zoom functionality accuracy
-- [ ] Test JSON export with complete data
-- [ ] Test error handling scenarios
+### Toast Notification System
+- [ ] **Create Toast notification system for user feedback**
+  ```jsx
+  // src/components/Toast.jsx
+  import React, { useState, useEffect, useCallback } from 'react';
+  
+  export const useToast = () => {
+    const [toasts, setToasts] = useState([]);
+    
+    const addToast = useCallback((message, type = 'info', duration = 4000) => {
+      const id = Date.now() + Math.random();
+      const toast = { id, message, type, duration };
+      
+      setToasts(prev => [...prev, toast]);
+      
+      if (duration > 0) {
+        setTimeout(() => {
+          removeToast(id);
+        }, duration);
+      }
+      
+      return id;
+    }, []);
+    
+    const removeToast = useCallback((id) => {
+      setToasts(prev => prev.filter(toast => toast.id !== id));
+    }, []);
+    
+    const success = useCallback((message, duration) => {
+      return addToast(message, 'success', duration);
+    }, [addToast]);
+    
+    const error = useCallback((message, duration = 6000) => {
+      return addToast(message, 'error', duration);
+    }, [addToast]);
+    
+    const warning = useCallback((message, duration) => {
+      return addToast(message, 'warning', duration);
+    }, [addToast]);
+    
+    const info = useCallback((message, duration) => {
+      return addToast(message, 'info', duration);
+    }, [addToast]);
+    
+    return {
+      toasts,
+      addToast,
+      removeToast,
+      success,
+      error,
+      warning,
+      info
+    };
+  };
+  
+  export const ToastContainer = ({ toasts, removeToast }) => {
+    return (
+      <div className="toast-container">
+        {toasts.map(toast => (
+          <Toast 
+            key={toast.id} 
+            toast={toast} 
+            onRemove={() => removeToast(toast.id)} 
+          />
+        ))}
+      </div>
+    );
+  };
+  
+  const Toast = ({ toast, onRemove }) => {
+    const [isVisible, setIsVisible] = useState(false);
+    
+    useEffect(() => {
+      // Trigger animation
+      const timer = setTimeout(() => setIsVisible(true), 10);
+      return () => clearTimeout(timer);
+    }, []);
+    
+    const handleRemove = () => {
+      setIsVisible(false);
+      setTimeout(onRemove, 300); // Wait for animation
+    };
+    
+    const getIcon = () => {
+      switch (toast.type) {
+        case 'success': return '✅';
+        case 'error': return '❌';
+        case 'warning': return '⚠️';
+        default: return 'ℹ️';
+      }
+    };
+    
+    return (
+      <div 
+        className={`toast toast-${toast.type} ${isVisible ? 'toast-visible' : ''}`}
+        onClick={handleRemove}
+      >
+        <span className="toast-icon">{getIcon()}</span>
+        <span className="toast-message">{toast.message}</span>
+        <button 
+          className="toast-close"
+          onClick={handleRemove}
+          aria-label="Close notification"
+        >
+          ×
+        </button>
+      </div>
+    );
+  };
+  ```
+  - Toast notification system for user feedback
+  - Different types: success, error, warning, info
+  - Auto-dismiss with configurable duration
 
-### Cross-browser Testing
-- [ ] Test in Chrome (latest)
-- [ ] Test in Firefox (latest)
-- [ ] Test in Safari (latest)
-- [ ] Test in Edge (latest)
-- [ ] Verify Canvas API compatibility
-- [ ] Test File API functionality
+### Loading States and Skeletons
+- [ ] **Create loading state components**
+  ```jsx
+  // src/components/LoadingStates.jsx
+  import React from 'react';
+  
+  export const LoadingSpinner = ({ size = 'medium', message }) => {
+    const sizeClass = `spinner-${size}`;
+    
+    return (
+      <div className="loading-spinner-container">
+        <div className={`loading-spinner ${sizeClass}`}></div>
+        {message && <div className="loading-message">{message}</div>}
+      </div>
+    );
+  };
+  
+  export const SkeletonLoader = ({ width, height, className }) => {
+    return (
+      <div 
+        className={`skeleton-loader ${className || ''}`}
+        style={{ width, height }}
+      ></div>
+    );
+  };
+  
+  export const ImagePlaceholder = ({ width, height }) => {
+    return (
+      <div className="image-placeholder" style={{ width, height }}>
+        <div className="placeholder-icon">🖼️</div>
+        <div className="placeholder-text">No image loaded</div>
+      </div>
+    );
+  };
+  
+  export const ButtonLoadingState = ({ isLoading, children, ...props }) => {
+    return (
+      <button {...props} disabled={isLoading || props.disabled}>
+        {isLoading ? (
+          <>
+            <LoadingSpinner size="small" />
+            <span>Loading...</span>
+          </>
+        ) : (
+          children
+        )}
+      </button>
+    );
+  };
+  ```
+  - Loading spinners with different sizes
+  - Skeleton loaders for content placeholders
+  - Button loading states with spinners
+
+### React Accessibility Enhancements
+- [ ] **Create accessibility utilities and components**
+  ```jsx
+  // src/components/Accessibility.jsx
+  import React, { useEffect, useRef } from 'react';
+  
+  export const SkipLink = ({ targetId, children }) => {
+    return (
+      <a 
+        href={`#${targetId}`}
+        className="skip-link"
+        onFocus={(e) => e.target.classList.add('skip-link-focused')}
+        onBlur={(e) => e.target.classList.remove('skip-link-focused')}
+      >
+        {children}
+      </a>
+    );
+  };
+  
+  export const VisuallyHidden = ({ children, focusable = false }) => {
+    return (
+      <span 
+        className={`visually-hidden ${focusable ? 'visually-hidden-focusable' : ''}`}
+      >
+        {children}
+      </span>
+    );
+  };
+  
+  export const FocusTrap = ({ children, isActive }) => {
+    const containerRef = useRef(null);
+    
+    useEffect(() => {
+      if (!isActive) return;
+      
+      const container = containerRef.current;
+      if (!container) return;
+      
+      const focusableElements = container.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+      
+      const handleTabKey = (e) => {
+        if (e.key !== 'Tab') return;
+        
+        if (e.shiftKey) {
+          if (document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement.focus();
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement.focus();
+          }
+        }
+      };
+      
+      container.addEventListener('keydown', handleTabKey);
+      firstElement?.focus();
+      
+      return () => {
+        container.removeEventListener('keydown', handleTabKey);
+      };
+    }, [isActive]);
+    
+    return (
+      <div ref={containerRef} className="focus-trap">
+        {children}
+      </div>
+    );
+  };
+  
+  export const useAnnouncement = () => {
+    const announcementRef = useRef(null);
+    
+    const announce = (message, priority = 'polite') => {
+      if (!announcementRef.current) {
+        // Create live region if it doesn't exist
+        const liveRegion = document.createElement('div');
+        liveRegion.setAttribute('aria-live', priority);
+        liveRegion.setAttribute('aria-atomic', 'true');
+        liveRegion.className = 'sr-only';
+        document.body.appendChild(liveRegion);
+        announcementRef.current = liveRegion;
+      }
+      
+      const liveRegion = announcementRef.current;
+      liveRegion.textContent = '';
+      
+      // Small delay to ensure screen readers pick up the change
+      setTimeout(() => {
+        liveRegion.textContent = message;
+      }, 100);
+    };
+    
+    return { announce };
+  };
+  ```
+  - Skip links for keyboard navigation
+  - Focus trap for modal interactions
+  - Screen reader announcements
+  - Visually hidden content for accessibility
+
+### Keyboard Navigation Support
+- [ ] **Add comprehensive keyboard navigation**
+  ```jsx
+  // src/hooks/useKeyboardNavigation.js
+  import { useEffect, useCallback } from 'react';
+  
+  export const useKeyboardNavigation = (appState, updateAppState) => {
+    const handleKeyDown = useCallback((e) => {
+      // Escape key cancels current mode
+      if (e.key === 'Escape' && appState.ui.activeMode) {
+        updateAppState({ ui: { activeMode: null } });
+        return;
+      }
+      
+      // Number keys for quick line selection (1-7)
+      if (e.key >= '1' && e.key <= '7' && !e.ctrlKey && !e.altKey) {
+        const lineTypes = [
+          'headerEnd', 'footerStart', 'textLine', 
+          'baseline', 'topLine', 'leftStart', 'rightStart'
+        ];
+        const index = parseInt(e.key) - 1;
+        if (index < lineTypes.length) {
+          updateAppState({ ui: { activeMode: lineTypes[index] } });
+          e.preventDefault();
+        }
+      }
+      
+      // Ctrl+Z for undo (future feature)
+      if (e.ctrlKey && e.key === 'z') {
+        // TODO: Implement undo functionality
+        e.preventDefault();
+      }
+      
+      // Ctrl+S for save/export
+      if (e.ctrlKey && e.key === 's') {
+        // Trigger export if ready
+        e.preventDefault();
+        // TODO: Trigger export function
+      }
+    }, [appState.ui.activeMode, updateAppState]);
+    
+    useEffect(() => {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [handleKeyDown]);
+  };
+  
+  export const useArrowKeyNavigation = (canvasRef, appState, updateAppState) => {
+    const handleArrowKeys = useCallback((e) => {
+      if (!appState.ui.activeMode || !canvasRef.current) return;
+      
+      const step = e.shiftKey ? 10 : 1; // Shift for larger steps
+      let newPosition = { ...appState.ui.zoomPosition };
+      
+      switch (e.key) {
+        case 'ArrowUp':
+          newPosition.y = Math.max(0, newPosition.y - step);
+          break;
+        case 'ArrowDown':
+          newPosition.y = Math.min(appState.image.height - 1, newPosition.y + step);
+          break;
+        case 'ArrowLeft':
+          newPosition.x = Math.max(0, newPosition.x - step);
+          break;
+        case 'ArrowRight':
+          newPosition.x = Math.min(appState.image.width - 1, newPosition.x + step);
+          break;
+        default:
+          return;
+      }
+      
+      updateAppState({ ui: { zoomPosition: newPosition } });
+      e.preventDefault();
+    }, [appState, updateAppState, canvasRef]);
+    
+    useEffect(() => {
+      document.addEventListener('keydown', handleArrowKeys);
+      return () => document.removeEventListener('keydown', handleArrowKeys);
+    }, [handleArrowKeys]);
+  };
+  ```
+  - Escape key to cancel operations
+  - Number keys for quick line selection
+  - Arrow keys for precise positioning
+  - Keyboard shortcuts for common actions
+
+## React Testing and Quality Assurance
+
+### React Testing Setup
+- [ ] **Set up React testing environment**
+  ```bash
+  # Install testing dependencies
+  npm install --save-dev @testing-library/react @testing-library/jest-dom @testing-library/user-event
+  npm install --save-dev jest-environment-jsdom canvas
+  ```
+  ```javascript
+  // src/setupTests.js
+  import '@testing-library/jest-dom';
+  
+  // Mock canvas for testing
+  HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
+    drawImage: jest.fn(),
+    getImageData: jest.fn(() => ({ data: new Uint8ClampedArray(4) })),
+    putImageData: jest.fn(),
+    clearRect: jest.fn(),
+    beginPath: jest.fn(),
+    moveTo: jest.fn(),
+    lineTo: jest.fn(),
+    stroke: jest.fn(),
+    fillText: jest.fn(),
+    measureText: jest.fn(() => ({ width: 100 })),
+  }));
+  
+  // Mock File API
+  global.URL.createObjectURL = jest.fn(() => 'mock-url');
+  global.URL.revokeObjectURL = jest.fn();
+  ```
+  - React Testing Library for component testing
+  - Canvas mocking for headless testing
+  - File API mocking for upload tests
+
+### Component Testing
+- [ ] **Create comprehensive component tests**
+  ```javascript
+  // src/components/__tests__/FileUpload.test.jsx
+  import React from 'react';
+  import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+  import userEvent from '@testing-library/user-event';
+  import { FileUpload } from '../FileUpload';
+  
+  const mockUpdateAppState = jest.fn();
+  const mockAppState = {
+    image: { file: null, canvas: null, originalData: null, processedData: null }
+  };
+  
+  describe('FileUpload Component', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+    
+    test('renders upload area when no file is selected', () => {
+      render(<FileUpload appState={mockAppState} updateAppState={mockUpdateAppState} />);
+      expect(screen.getByText(/click to upload/i)).toBeInTheDocument();
+    });
+    
+    test('handles file selection', async () => {
+      const user = userEvent.setup();
+      render(<FileUpload appState={mockAppState} updateAppState={mockUpdateAppState} />);
+      
+      const file = new File(['test'], 'test.png', { type: 'image/png' });
+      const input = screen.getByLabelText(/click to upload/i);
+      
+      await user.upload(input, file);
+      
+      await waitFor(() => {
+        expect(mockUpdateAppState).toHaveBeenCalled();
+      });
+    });
+    
+    test('validates file type', async () => {
+      const user = userEvent.setup();
+      render(<FileUpload appState={mockAppState} updateAppState={mockUpdateAppState} />);
+      
+      const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
+      const input = screen.getByLabelText(/click to upload/i);
+      
+      await user.upload(input, file);
+      
+      expect(screen.getByText(/please select a png file/i)).toBeInTheDocument();
+    });
+    
+    test('handles drag and drop', async () => {
+      render(<FileUpload appState={mockAppState} updateAppState={mockUpdateAppState} />);
+      
+      const dropZone = screen.getByText(/click to upload/i).closest('.file-upload-area');
+      const file = new File(['test'], 'test.png', { type: 'image/png' });
+      
+      fireEvent.dragEnter(dropZone, {
+        dataTransfer: { files: [file] }
+      });
+      
+      expect(dropZone).toHaveClass('drag-active');
+      
+      fireEvent.drop(dropZone, {
+        dataTransfer: { files: [file] }
+      });
+      
+      await waitFor(() => {
+        expect(mockUpdateAppState).toHaveBeenCalled();
+      });
+    });
+  });
+  ```
+  - File upload functionality testing
+  - Drag and drop interaction testing
+  - File validation testing
+
+### Hook Testing
+- [ ] **Test custom React hooks**
+  ```javascript
+  // src/hooks/__tests__/useImageProcessor.test.js
+  import { renderHook, act } from '@testing-library/react';
+  import { useImageProcessor } from '../useImageProcessor';
+  
+  const mockAppState = {
+    image: {
+      canvas: document.createElement('canvas'),
+      originalData: new ImageData(100, 100)
+    }
+  };
+  
+  const mockUpdateAppState = jest.fn();
+  
+  describe('useImageProcessor Hook', () => {
+    test('processes background removal', async () => {
+      const { result } = renderHook(() => 
+        useImageProcessor(mockAppState, mockUpdateAppState)
+      );
+      
+      await act(async () => {
+        result.current.processBackgroundRemoval(50, 50);
+      });
+      
+      expect(mockUpdateAppState).toHaveBeenCalledWith(
+        expect.objectContaining({
+          settings: expect.objectContaining({
+            backgroundRemoved: true
+          })
+        })
+      );
+    });
+    
+    test('generates base64 image data', () => {
+      const { result } = renderHook(() => 
+        useImageProcessor(mockAppState, mockUpdateAppState)
+      );
+      
+      const base64Data = result.current.getBase64ImageData();
+      expect(typeof base64Data).toBe('string');
+      expect(base64Data).toMatch(/^data:image\/png;base64,/);
+    });
+  });
+  ```
+  - Custom hook behavior testing
+  - State update verification
+  - Function return value testing
+
+### Integration Testing
+- [ ] **Create integration tests for complete workflows**
+  ```javascript
+  // src/__tests__/StampCreationWorkflow.test.jsx
+  import React from 'react';
+  import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+  import userEvent from '@testing-library/user-event';
+  import App from '../App';
+  
+  describe('Complete Stamp Creation Workflow', () => {
+    test('creates a stamp from start to finish', async () => {
+      const user = userEvent.setup();
+      render(<App />);
+      
+      // Step 1: Upload image
+      const file = new File(['test'], 'test.png', { type: 'image/png' });
+      const fileInput = screen.getByLabelText(/click to upload/i);
+      await user.upload(fileInput, file);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/loaded successfully/i)).toBeInTheDocument();
+      });
+      
+      // Step 2: Remove background
+      const removeBackgroundBtn = screen.getByText(/remove background/i);
+      await user.click(removeBackgroundBtn);
+      
+      // Simulate canvas click for background removal
+      const canvas = screen.getByRole('img'); // Canvas with image
+      fireEvent.click(canvas, { clientX: 100, clientY: 100 });
+      
+      await waitFor(() => {
+        expect(screen.getByText(/background removed/i)).toBeInTheDocument();
+      });
+      
+      // Step 3: Select required lines
+      const headerBtn = screen.getByText(/header end/i);
+      await user.click(headerBtn);
+      fireEvent.click(canvas, { clientX: 50, clientY: 50 });
+      
+      const footerBtn = screen.getByText(/footer start/i);
+      await user.click(footerBtn);
+      fireEvent.click(canvas, { clientX: 50, clientY: 150 });
+      
+      const textBtn = screen.getByText(/text line/i);
+      await user.click(textBtn);
+      fireEvent.click(canvas, { clientX: 50, clientY: 100 });
+      
+      // Step 4: Enter stamp name
+      const nameInput = screen.getByLabelText(/stamp name/i);
+      await user.type(nameInput, 'Test Stamp');
+      
+      // Step 5: Export
+      const exportBtn = screen.getByText(/export stamp file/i);
+      expect(exportBtn).not.toBeDisabled();
+      
+      await user.click(exportBtn);
+      
+      // Verify export was triggered (would need to mock download)
+      await waitFor(() => {
+        expect(screen.getByText(/export successful/i)).toBeInTheDocument();
+      });
+    });
+  });
+  ```
+  - End-to-end workflow testing
+  - Multi-step interaction verification
+  - State progression validation
 
 ### Performance Testing
-- [ ] Test with large PNG files
-- [ ] Test with many letter lines
-- [ ] Verify smooth zoom updates
-- [ ] Check memory usage during operations
-- [ ] Optimize canvas rendering performance
+- [ ] **Create performance tests for React components**
+  ```javascript
+  // src/__tests__/Performance.test.js
+  import React from 'react';
+  import { render, act } from '@testing-library/react';
+  import { performance } from 'perf_hooks';
+  import { ZoomView } from '../components/ZoomView';
+  
+  describe('Performance Tests', () => {
+    test('zoom updates perform within acceptable time', async () => {
+      const mockAppState = {
+        ui: { zoomVisible: true, zoomPosition: { x: 100, y: 100 } },
+        image: { canvas: document.createElement('canvas') }
+      };
+      
+      const startTime = performance.now();
+      
+      await act(async () => {
+        render(<ZoomView appState={mockAppState} updateAppState={jest.fn()} />);
+        
+        // Simulate multiple zoom updates
+        for (let i = 0; i < 100; i++) {
+          mockAppState.ui.zoomPosition = { x: i, y: i };
+        }
+      });
+      
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+      
+      // Should complete within 100ms
+      expect(duration).toBeLessThan(100);
+    });
+    
+    test('large image handling', async () => {
+      const largeCanvas = document.createElement('canvas');
+      largeCanvas.width = 4000;
+      largeCanvas.height = 4000;
+      
+      const mockAppState = {
+        image: { canvas: largeCanvas, width: 4000, height: 4000 },
+        lines: { letterLines: Array.from({ length: 50 }, (_, i) => i * 10) }
+      };
+      
+      const startTime = performance.now();
+      
+      await act(async () => {
+        render(<App />);
+        // Simulate operations with large image
+      });
+      
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+      
+      // Should handle large images within reasonable time
+      expect(duration).toBeLessThan(1000);
+    });
+  });
+  ```
+  - Zoom performance benchmarking
+  - Large image handling tests
+  - Memory usage monitoring
+
+### Cross-browser Testing Strategy
+- [ ] **Set up cross-browser testing with Playwright**
+  ```javascript
+  // tests/e2e/crossBrowser.spec.js
+  import { test, expect } from '@playwright/test';
+  
+  ['chromium', 'firefox', 'webkit'].forEach(browserName => {
+    test.describe(`${browserName} browser tests`, () => {
+      test('file upload works', async ({ page }) => {
+        await page.goto('http://localhost:3000');
+        
+        const fileInput = page.locator('input[type="file"]');
+        await fileInput.setInputFiles('test-data/sample.png');
+        
+        await expect(page.locator('text=loaded successfully')).toBeVisible();
+      });
+      
+      test('canvas operations work', async ({ page }) => {
+        await page.goto('http://localhost:3000');
+        
+        // Upload file first
+        await page.locator('input[type="file"]').setInputFiles('test-data/sample.png');
+        
+        // Test canvas click
+        await page.click('button:has-text("Remove Background")');
+        await page.click('canvas');
+        
+        await expect(page.locator('text=background removed')).toBeVisible();
+      });
+      
+      test('keyboard navigation works', async ({ page }) => {
+        await page.goto('http://localhost:3000');
+        
+        // Test escape key
+        await page.keyboard.press('Escape');
+        
+        // Test number keys for line selection
+        await page.keyboard.press('1');
+        await expect(page.locator('button:has-text("Click to place")')).toBeVisible();
+      });
+    });
+  });
+  ```
+  - Multi-browser compatibility testing
+  - Canvas API compatibility verification
+  - File API functionality testing
+
+### Accessibility Testing
+- [ ] **Add automated accessibility testing**
+  ```javascript
+  // src/__tests__/Accessibility.test.jsx
+  import React from 'react';
+  import { render } from '@testing-library/react';
+  import { axe, toHaveNoViolations } from 'jest-axe';
+  import App from '../App';
+  
+  expect.extend(toHaveNoViolations);
+  
+  describe('Accessibility Tests', () => {
+    test('app has no accessibility violations', async () => {
+      const { container } = render(<App />);
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+    
+    test('keyboard navigation works', async () => {
+      const { container } = render(<App />);
+      
+      // Test tab navigation
+      const focusableElements = container.querySelectorAll(
+        'button, input, [tabindex]:not([tabindex="-1"])'
+      );
+      
+      expect(focusableElements.length).toBeGreaterThan(0);
+      
+      // Each focusable element should have proper labels
+      focusableElements.forEach(element => {
+        expect(
+          element.getAttribute('aria-label') ||
+          element.getAttribute('aria-labelledby') ||
+          element.textContent.trim()
+        ).toBeTruthy();
+      });
+    });
+  });
+  ```
+  - Automated accessibility testing with axe
+  - Keyboard navigation verification
+  - ARIA label validation
 
 ## Documentation and Cleanup
 
