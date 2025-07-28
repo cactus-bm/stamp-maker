@@ -1,7 +1,7 @@
 # Image Manipulation Web Application Requirements
 
 ## Overview
-This is a client-side web application that runs entirely in the browser without requiring any backend services. The application will provide basic image manipulation capabilities for PNG files, focusing on background removal and line selection for text processing and layout analysis. All image processing and data manipulation will be performed using JavaScript and HTML5 Canvas API.
+This is a client-side web application that runs entirely in the browser without requiring any backend services. The application will provide basic image manipulation capabilities for PNG files, focusing on background removal and line selection for the creation of stamp files which have user entered data entered in them. All image processing and data manipulation will be performed using JavaScript and HTML5 Canvas API.
 
 ## Technical Architecture
 
@@ -26,13 +26,13 @@ This is a client-side web application that runs entirely in the browser without 
 - Users can drag and drop a PNG file into the application
 - The uploaded image is displayed on screen for manipulation
 - The application maintains the original image data separate from the visual overlay
+- The application maintains the background removed image data separately too.
 
 ### 2. Background Removal (Color to Alpha)
 - **Remove Background Button**: Initiates background removal mode
 - **Pixel Selection**: User clicks on a pixel in the image to select the color to remove
-- **Color Processing**: All pixels matching the selected color are converted to transparent (alpha)
-- **Simplified Implementation**: Initial version can focus on removing white pixels specifically
-- **Semi-transparency**: Colors similar to the selected color (e.g., grey when white is selected) become semi-transparent
+- **Small Zoom Screen**: A small zoomed in view of the image is displayed to allow for precise pixel selection
+- **Color Processing**: A background removal algorithm is applied that will be further definied in the design note.
 
 ### 3. Line Selection Interface
 
@@ -41,27 +41,31 @@ This is a client-side web application that runs entirely in the browser without 
 - **Visual Feedback**: Horizontal line follows mouse cursor when button is active
 - **Line Placement**: Click to place horizontal line on the image view (overlay only)
 - **Data Storage**: Store the Y-coordinate of the selected line
-- **Manual Input**: Text field to manually adjust the line position
+- **Small Zoom Screen**: A small zoomed in view of the image is displayed to allow for precise pixel selection
+- **Manual Input**: Text field (of type number) to manually adjust the line position
 
 #### Footer Start Selection
 - **Button**: "Select Footer Start"
 - **Visual Feedback**: Horizontal line follows mouse cursor when button is active
 - **Line Placement**: Click to place horizontal line on the image view (overlay only)
 - **Data Storage**: Store the Y-coordinate of the selected line
-- **Manual Input**: Text field to manually adjust the line position
+- **Small Zoom Screen**: A small zoomed in view of the image is displayed to allow for precise pixel selection
+- **Manual Input**: Text field (of type number) to manually adjust the line position
 
 #### Text Line Selection
 - **Button**: "Select Text Line"
 - **Visual Feedback**: Horizontal line follows mouse cursor when button is active
 - **Line Placement**: Click to place horizontal line on the image view (overlay only)
 - **Data Storage**: Store the Y-coordinate of the selected line
-- **Manual Input**: Text field to manually adjust the line position
+- **Small Zoom Screen**: A small zoomed in view of the image is displayed to allow for precise pixel selection
+- **Manual Input**: Text field (of type number) to manually adjust the line position
 
 #### Baseline Selection (Optional)
 - **Button**: "Select Baseline"
 - **Default Behavior**: If not selected, defaults to 1 pixel below the footer start line
 - **Visual Feedback**: Horizontal line follows mouse cursor when button is active
 - **Line Placement**: Click to place horizontal line on the image view (overlay only)
+- **Small Zoom Screen**: A small zoomed in view of the image is displayed to allow for precise pixel selection
 - **Data Storage**: Store the Y-coordinate of the selected line
 - **Manual Input**: Text field to manually adjust the line position
 
@@ -70,6 +74,7 @@ This is a client-side web application that runs entirely in the browser without 
 - **Default Behavior**: If not selected, defaults to 1 pixel above the header end line
 - **Visual Feedback**: Horizontal line follows mouse cursor when button is active
 - **Line Placement**: Click to place horizontal line on the image view (overlay only)
+- **Small Zoom Screen**: A small zoomed in view of the image is displayed to allow for precise pixel selection
 - **Data Storage**: Store the Y-coordinate of the selected line
 - **Manual Input**: Text field to manually adjust the line position
 
@@ -80,6 +85,7 @@ This is a client-side web application that runs entirely in the browser without 
 - **Visual Feedback**: Vertical line follows mouse cursor when button is active
 - **Line Placement**: Click to place vertical line on the image view (overlay only)
 - **Data Storage**: Store the X-coordinate of the selected line
+- **Small Zoom Screen**: A small zoomed in view of the image is displayed to allow for precise pixel selection
 - **Manual Input**: Text field to manually adjust the line position
 
 #### Right Start Selection
@@ -87,6 +93,7 @@ This is a client-side web application that runs entirely in the browser without 
 - **Visual Feedback**: Vertical line follows mouse cursor when button is active
 - **Line Placement**: Click to place vertical line on the image view (overlay only)
 - **Data Storage**: Store the X-coordinate of the selected line
+- **Small Zoom Screen**: A small zoomed in view of the image is displayed to allow for precise pixel selection
 - **Manual Input**: Text field to manually adjust the line position
 
 #### Letter Lines Selection
@@ -95,6 +102,7 @@ This is a client-side web application that runs entirely in the browser without 
 - **Visual Feedback**: Vertical line follows mouse cursor when button is active
 - **Line Placement**: Click to place multiple vertical lines on the image view (overlay only)
 - **Data Storage**: Store array of X-coordinates for all letter lines
+- **Small Zoom Screen**: A small zoomed in view of the image is displayed to allow for precise pixel selection
 - **Manual Input**: Text fields to manually adjust each line position
 - **Deactivation**: Click the button again or click outside the image area to stop adding lines
 
@@ -105,12 +113,6 @@ This is a client-side web application that runs entirely in the browser without 
 ### 6. Data Export
 - **Save Button**: Exports all collected data to a JSON file
 - **Data Structure**: Will be defined in the next phase (design note)
-- **Included Data**:
-  - Image metadata
-  - All line coordinates (header end, footer start, text line, baseline, top line)
-  - Vertical line coordinates (left start, right start, letter lines array)
-  - Entered name
-  - Background removal settings
 
 ## User Interface Requirements
 
@@ -131,12 +133,7 @@ This is a client-side web application that runs entirely in the browser without 
 
 ### Technical Considerations
 - Lines are drawn as overlays on the image view, not modifying the original image data
-- All coordinate data is stored relative to the original image dimensions
+- All coordinate data is stored relative to the original image dimensions with y = 0 representing the top of the image and y = height representing the bottom of the image.
 - The application maintains separation between visual presentation and data storage
-- Manual input fields allow precise adjustment of line positions
+- Manual input fields allow precise adjustment of line positions and update the lines on the screen.
 - JSON export preserves all user selections and modifications
-
-## Future Considerations
-- The JSON output format will be specified in the upcoming design note
-- Additional image manipulation features may be added in future iterations
-- Support for other image formats may be considered later
