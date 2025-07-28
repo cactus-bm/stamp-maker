@@ -1,19 +1,33 @@
 # Image Manipulation Web Application - Design Document
 
 ## Overview
-This document outlines the technical design for a client-side web application that creates stamp files from PNG images. The application focuses on background removal and precise line selection for stamp creation with user-entered data. The application will be built using HTML5, CSS3, and JavaScript without requiring any backend services.
+This document outlines the technical design for a client-side React web application that creates stamp files from PNG images. The application focuses on background removal and precise line selection for stamp creation with user-entered data. The application will be built using React, HTML5 Canvas API, and modern JavaScript without requiring any backend services.
 
 ## System Architecture
 
 ### Application Structure
 ```
-index.html          # Main HTML structure
-styles.css          # Application styling
-app.js              # Main application logic
-imageProcessor.js   # Image manipulation utilities
-lineManager.js      # Line selection and overlay management
-zoomManager.js      # Small zoom screen for precise selection
-dataExporter.js     # JSON export functionality
+public/
+  index.html        # Main HTML entry point
+src/
+  App.js            # Main React application component
+  components/
+    FileUpload.js   # File upload and drag-drop component
+    ControlPanel.js # Main control panel container
+    LineControls.js # Line selection buttons and inputs
+    CanvasDisplay.js # Image display and canvas management
+    ZoomView.js     # Zoom functionality component
+  hooks/
+    useImageProcessor.js # Custom hook for image manipulation
+    useLineManager.js    # Custom hook for line selection
+    useZoomManager.js    # Custom hook for zoom functionality
+  utils/
+    imageProcessor.js    # Image manipulation utilities
+    dataExporter.js      # JSON export functionality
+  styles/
+    App.css         # Main application styles
+    components.css  # Component-specific styles
+package.json        # React dependencies and scripts
 ```
 
 ### Core Components
