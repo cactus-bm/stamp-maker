@@ -4368,33 +4368,693 @@ This document contains a comprehensive checklist of tasks needed to implement th
   - Keyboard navigation verification
   - ARIA label validation
 
-## Documentation and Cleanup
+## React Documentation and Cleanup
 
-### Code Documentation
-- [ ] Add JSDoc comments to all functions
-- [ ] Document function parameters and return values
-- [ ] Add inline comments for complex algorithms
-- [ ] Create usage examples in comments
+### React Component Documentation
+- [ ] **Add comprehensive JSDoc comments to all React components**
+  ```jsx
+  /**
+   * FileUpload Component - Handles PNG file upload with drag-and-drop functionality
+   * 
+   * @component
+   * @param {Object} props - Component props
+   * @param {Object} props.appState - Application state object
+   * @param {Object} props.appState.image - Image-related state
+   * @param {Function} props.updateAppState - Function to update application state
+   * @returns {JSX.Element} File upload component with drag-and-drop area
+   * 
+   * @example
+   * <FileUpload 
+   *   appState={appState} 
+   *   updateAppState={updateAppState} 
+   * />
+   */
+  export const FileUpload = ({ appState, updateAppState }) => {
+    // Component implementation
+  };
+  ```
+  - Document all component props with TypeScript-style annotations
+  - Include usage examples for each component
+  - Document component behavior and side effects
 
-### Final Cleanup
-- [ ] Remove console.log statements
-- [ ] Clean up unused CSS rules
-- [ ] Optimize file organization
-- [ ] Verify all tasks are completed
-- [ ] Test complete workflow end-to-end
+### React Hook Documentation
+- [ ] **Document all custom React hooks with detailed JSDoc**
+  ```jsx
+  /**
+   * useImageProcessor - Custom hook for image processing operations
+   * 
+   * @hook
+   * @param {Object} appState - Current application state
+   * @param {Function} updateAppState - State update function
+   * @returns {Object} Image processing functions and state
+   * @returns {React.RefObject} returns.canvasRef - Canvas element reference
+   * @returns {Function} returns.loadImage - Loads image file to canvas
+   * @returns {Function} returns.processBackgroundRemoval - Removes background using color-to-alpha
+   * @returns {Function} returns.getBase64ImageData - Exports image as base64 string
+   * 
+   * @example
+   * const { loadImage, processBackgroundRemoval } = useImageProcessor(appState, updateAppState);
+   * 
+   * // Load an image file
+   * await loadImage(file);
+   * 
+   * // Remove background at coordinates
+   * processBackgroundRemoval(100, 150);
+   */
+  export const useImageProcessor = (appState, updateAppState) => {
+    // Hook implementation
+  };
+  ```
+  - Document hook parameters and return values
+  - Include practical usage examples
+  - Document hook dependencies and side effects
 
-## Deployment Preparation
+### Algorithm Documentation
+- [ ] **Document complex algorithms with detailed comments**
+  ```jsx
+  /**
+   * Color-to-Alpha Background Removal Algorithm
+   * 
+   * Converts a target color to transparent pixels using alpha ratio calculations.
+   * Based on the GIMP color-to-alpha algorithm for precise background removal.
+   * 
+   * @param {ImageData} imageData - Source image data from canvas
+   * @param {Object} targetColor - RGB color to make transparent
+   * @param {number} targetColor.r - Red component (0-255)
+   * @param {number} targetColor.g - Green component (0-255)
+   * @param {number} targetColor.b - Blue component (0-255)
+   * @returns {ImageData} Processed image data with transparency
+   * 
+   * Algorithm steps:
+   * 1. Normalize RGB values to 0-1 range
+   * 2. Calculate alpha ratio for each pixel
+   * 3. Apply color-to-alpha conversion formula
+   * 4. Clamp values and convert back to 0-255 range
+   */
+  export const removeBackground = (imageData, targetColor) => {
+    const { r: tr, g: tg, b: tb } = targetColor;
+    const result = new ImageData(imageData.width, imageData.height);
+    const data = result.data;
+    
+    // Normalize target color to 0-1 range for calculations
+    const targetR = tr / 255;
+    const targetG = tg / 255;
+    const targetB = tb / 255;
+    
+    for (let i = 0; i < imageData.data.length; i += 4) {
+      // Normalize current pixel color to 0-1 range
+      const r = imageData.data[i] / 255;
+      const g = imageData.data[i + 1] / 255;
+      const b = imageData.data[i + 2] / 255;
+      
+      // Calculate alpha ratio - determines how much of target color to remove
+      let alphaRatio = 1;
+      if (targetR > 0) alphaRatio = Math.min(alphaRatio, r / targetR);
+      if (targetG > 0) alphaRatio = Math.min(alphaRatio, g / targetG);
+      if (targetB > 0) alphaRatio = Math.min(alphaRatio, b / targetB);
+      
+      // Clamp alpha ratio and calculate final alpha
+      alphaRatio = Math.max(0, Math.min(1, alphaRatio));
+      const alpha = 1 - alphaRatio;
+      
+      // Apply color-to-alpha conversion formula
+      const newR = alpha > 0 ? (r - targetR * (1 - alpha)) / alpha : 0;
+      const newG = alpha > 0 ? (g - targetG * (1 - alpha)) / alpha : 0;
+      const newB = alpha > 0 ? (b - targetB * (1 - alpha)) / alpha : 0;
+      
+      // Convert back to 0-255 range and store in result
+      data[i]     = Math.round(Math.max(0, Math.min(1, newR)) * 255);
+      data[i + 1] = Math.round(Math.max(0, Math.min(1, newG)) * 255);
+      data[i + 2] = Math.round(Math.max(0, Math.min(1, newB)) * 255);
+      data[i + 3] = Math.round(alpha * 255);
+    }
+    
+    return result;
+  };
+  ```
+  - Detailed algorithm explanation with mathematical formulas
+  - Step-by-step process documentation
+  - Parameter validation and edge case handling
 
-### Final Validation
-- [ ] Verify all features work as specified in requirements
-- [ ] Test complete stamp creation workflow
-- [ ] Validate exported JSON matches specification exactly
-- [ ] Ensure application works offline (no external dependencies)
-- [ ] Test with sample stamp images from test_data folder
+### React Development Cleanup
+- [ ] **Remove development artifacts and optimize for production**
+  ```javascript
+  // Remove all console.log statements except critical error logging
+  // Before:
+  console.log('Debug: Processing background removal', targetColor);
+  
+  // After: (only keep essential error logging)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Debug: Processing background removal', targetColor);
+  }
+  
+  // Or use proper error logging
+  logError(error, 'Background removal failed');
+  ```
+  - Remove debug console.log statements
+  - Keep only essential error logging
+  - Add environment-specific logging
 
-### Ready for Use
-- [ ] Application successfully creates stamp files
-- [ ] All UI interactions work smoothly
-- [ ] Error handling is robust
-- [ ] Code is clean and well-documented
-- [ ] Application meets all requirements from spec/requirements.md
+### CSS and Styling Cleanup
+- [ ] **Optimize CSS for production and remove unused styles**
+  ```css
+  /* Remove unused CSS classes */
+  /* Before: */
+  .unused-class {
+    display: none;
+  }
+  
+  /* After: Remove completely */
+  
+  /* Optimize CSS custom properties */
+  :root {
+    /* Color palette */
+    --primary-color: #007bff;
+    --success-color: #28a745;
+    --error-color: #dc3545;
+    --warning-color: #ffc107;
+    
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    
+    /* Typography */
+    --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-family-mono: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  }
+  
+  /* Consolidate similar styles */
+  .btn, .button {
+    /* Unified button styles */
+  }
+  ```
+  - Remove unused CSS classes and rules
+  - Consolidate similar styles
+  - Use CSS custom properties for consistency
+
+### File Organization and Structure
+- [ ] **Optimize React project structure**
+  ```
+  src/
+  ├── components/           # React components
+  │   ├── common/          # Reusable components
+  │   │   ├── Button.jsx
+  │   │   ├── ErrorDisplay.jsx
+  │   │   └── LoadingStates.jsx
+  │   ├── FileUpload.jsx   # Feature-specific components
+  │   ├── LineControls.jsx
+  │   ├── ZoomView.jsx
+  │   └── __tests__/       # Component tests
+  ├── hooks/               # Custom React hooks
+  │   ├── useImageProcessor.js
+  │   ├── useLineManager.js
+  │   ├── useZoomManager.js
+  │   └── __tests__/       # Hook tests
+  ├── utils/               # Utility functions
+  │   ├── imageProcessor.js
+  │   ├── exportUtils.js
+  │   ├── validation.js
+  │   └── __tests__/       # Utility tests
+  ├── styles/              # CSS files
+  │   ├── components/      # Component-specific styles
+  │   ├── globals.css      # Global styles
+  │   └── variables.css    # CSS custom properties
+  ├── App.jsx              # Main application component
+  ├── App.css              # App-specific styles
+  └── index.js             # Application entry point
+  ```
+  - Organize components by feature and reusability
+  - Co-locate tests with source files
+  - Separate utilities from components
+
+### Code Quality Verification
+- [ ] **Run comprehensive code quality checks**
+  ```bash
+  # ESLint for code quality
+  npx eslint src/ --ext .js,.jsx --fix
+  
+  # Prettier for code formatting
+  npx prettier --write "src/**/*.{js,jsx,css}"
+  
+  # React-specific linting
+  npx eslint src/ --ext .jsx --config .eslintrc.react.js
+  
+  # Bundle size analysis
+  npm run build
+  npx webpack-bundle-analyzer build/static/js/*.js
+  
+  # Accessibility audit
+  npm run build
+  npx lighthouse http://localhost:3000 --only-categories=accessibility
+  ```
+  - ESLint for code quality and React best practices
+  - Prettier for consistent code formatting
+  - Bundle size optimization
+  - Accessibility compliance verification
+
+## React Deployment Preparation
+
+### Production Build Optimization
+- [ ] **Optimize React application for production deployment**
+  ```bash
+  # Create optimized production build
+  npm run build
+  
+  # Analyze bundle size and dependencies
+  npx webpack-bundle-analyzer build/static/js/*.js
+  
+  # Check for unused dependencies
+  npx depcheck
+  
+  # Optimize images and assets
+  npx imagemin build/static/media/* --out-dir=build/static/media/
+  ```
+  ```javascript
+  // webpack.config.js optimizations for production
+  module.exports = {
+    optimization: {
+      splitChunks: {
+        chunks: 'all',
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+          },
+        },
+      },
+    },
+    // Enable compression
+    plugins: [
+      new CompressionPlugin({
+        algorithm: 'gzip',
+        test: /\.(js|css|html|svg)$/,
+        threshold: 8192,
+        minRatio: 0.8,
+      }),
+    ],
+  };
+  ```
+  - Bundle size optimization and code splitting
+  - Asset compression and minification
+  - Dependency analysis and cleanup
+
+### React Application Validation
+- [ ] **Comprehensive end-to-end validation of React app**
+  ```javascript
+  // src/__tests__/DeploymentValidation.test.jsx
+  import React from 'react';
+  import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+  import userEvent from '@testing-library/user-event';
+  import App from '../App';
+  
+  describe('Deployment Validation', () => {
+    test('complete stamp creation workflow', async () => {
+      const user = userEvent.setup();
+      render(<App />);
+      
+      // 1. Verify initial state
+      expect(screen.getByText(/upload an image to begin/i)).toBeInTheDocument();
+      
+      // 2. Test file upload
+      const file = new File(['test'], 'test.png', { type: 'image/png' });
+      const fileInput = screen.getByLabelText(/click to upload/i);
+      await user.upload(fileInput, file);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/loaded successfully/i)).toBeInTheDocument();
+      });
+      
+      // 3. Test background removal
+      const removeBackgroundBtn = screen.getByText(/remove background/i);
+      await user.click(removeBackgroundBtn);
+      
+      const canvas = screen.getByRole('img');
+      fireEvent.click(canvas, { clientX: 100, clientY: 100 });
+      
+      await waitFor(() => {
+        expect(screen.getByText(/background removed/i)).toBeInTheDocument();
+      });
+      
+      // 4. Test required line selection
+      const requiredLines = [
+        { name: /header end/i, coords: { clientX: 50, clientY: 50 } },
+        { name: /footer start/i, coords: { clientX: 50, clientY: 150 } },
+        { name: /text line/i, coords: { clientX: 50, clientY: 100 } }
+      ];
+      
+      for (const line of requiredLines) {
+        const button = screen.getByText(line.name);
+        await user.click(button);
+        fireEvent.click(canvas, line.coords);
+        
+        await waitFor(() => {
+          expect(screen.getByText(/✓/)).toBeInTheDocument();
+        });
+      }
+      
+      // 5. Test name input
+      const nameInput = screen.getByLabelText(/stamp name/i);
+      await user.type(nameInput, 'Test Stamp');
+      
+      // 6. Verify export readiness
+      const exportBtn = screen.getByText(/export stamp file/i);
+      expect(exportBtn).not.toBeDisabled();
+      
+      // 7. Test export functionality
+      await user.click(exportBtn);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/ready to export/i)).toBeInTheDocument();
+      });
+    });
+    
+    test('validates exported JSON format', async () => {
+      // Mock the download functionality to capture exported data
+      const mockCreateObjectURL = jest.fn(() => 'mock-url');
+      global.URL.createObjectURL = mockCreateObjectURL;
+      
+      const mockClick = jest.fn();
+      const mockLink = {
+        href: '',
+        download: '',
+        click: mockClick,
+        style: { display: '' }
+      };
+      
+      jest.spyOn(document, 'createElement').mockImplementation((tag) => {
+        if (tag === 'a') return mockLink;
+        return document.createElement(tag);
+      });
+      
+      // Perform complete workflow and export
+      // ... (setup steps)
+      
+      // Verify JSON structure matches specification
+      expect(mockCreateObjectURL).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'application/json'
+        })
+      );
+      
+      // Parse the JSON data from the blob
+      const blobContent = mockCreateObjectURL.mock.calls[0][0];
+      const jsonText = await blobContent.text();
+      const exportedData = JSON.parse(jsonText);
+      
+      // Validate stamp file structure
+      expect(exportedData).toMatchObject({
+        name: expect.any(String),
+        type: 'SYNDICATE',
+        referenceHeight: expect.any(Number),
+        headerBottom: expect.any(Number),
+        footerTop: expect.any(Number),
+        fontSize: expect.any(Number),
+        baseCoordinate: expect.arrayContaining([expect.any(Number)]),
+        offset: { x: 0, y: 0 },
+        imageData: expect.stringMatching(/^data:image\/png;base64,/)
+      });
+    });
+  });
+  ```
+  - Complete workflow validation from start to finish
+  - JSON export format verification
+  - Error handling and edge case testing
+
+### Cross-Browser Compatibility Testing
+- [ ] **Verify React app works across all target browsers**
+  ```javascript
+  // playwright.config.js
+  module.exports = {
+    testDir: './tests/e2e',
+    projects: [
+      {
+        name: 'chromium',
+        use: { ...devices['Desktop Chrome'] },
+      },
+      {
+        name: 'firefox',
+        use: { ...devices['Desktop Firefox'] },
+      },
+      {
+        name: 'webkit',
+        use: { ...devices['Desktop Safari'] },
+      },
+    ],
+  };
+  ```
+  ```javascript
+  // tests/e2e/crossBrowser.spec.js
+  import { test, expect } from '@playwright/test';
+  
+  test.describe('Cross-browser compatibility', () => {
+    test('Canvas API compatibility', async ({ page }) => {
+      await page.goto('http://localhost:3000');
+      
+      // Test canvas context creation
+      const canvasSupport = await page.evaluate(() => {
+        const canvas = document.createElement('canvas');
+        return !!(canvas.getContext && canvas.getContext('2d'));
+      });
+      
+      expect(canvasSupport).toBe(true);
+    });
+    
+    test('File API compatibility', async ({ page }) => {
+      await page.goto('http://localhost:3000');
+      
+      // Test File API support
+      const fileApiSupport = await page.evaluate(() => {
+        return !!(window.File && window.FileReader && window.FileList && window.Blob);
+      });
+      
+      expect(fileApiSupport).toBe(true);
+    });
+    
+    test('Complete workflow in each browser', async ({ page }) => {
+      await page.goto('http://localhost:3000');
+      
+      // Upload file
+      await page.setInputFiles('input[type="file"]', 'test-data/sample.png');
+      await expect(page.locator('text=loaded successfully')).toBeVisible();
+      
+      // Remove background
+      await page.click('button:has-text("Remove Background")');
+      await page.click('canvas');
+      await expect(page.locator('text=background removed')).toBeVisible();
+      
+      // Select lines
+      await page.click('button:has-text("Header End")');
+      await page.click('canvas');
+      
+      // Export
+      await page.fill('input[placeholder="Enter stamp name"]', 'Test Stamp');
+      await page.click('button:has-text("Export Stamp File")');
+      
+      // Verify download was triggered
+      const downloadPromise = page.waitForEvent('download');
+      await downloadPromise;
+    });
+  });
+  ```
+  - Multi-browser testing with Playwright
+  - API compatibility verification
+  - Complete workflow testing per browser
+
+### Performance and Accessibility Audit
+- [ ] **Run comprehensive performance and accessibility audits**
+  ```bash
+  # Lighthouse audit for performance, accessibility, and best practices
+  npm run build
+  npx serve -s build &
+  npx lighthouse http://localhost:3000 --output html --output-path ./audit-report.html
+  
+  # Accessibility-specific audit
+  npx lighthouse http://localhost:3000 --only-categories=accessibility --output json --output-path ./accessibility-report.json
+  
+  # Performance budget check
+  npx bundlesize
+  ```
+  ```javascript
+  // package.json performance budgets
+  {
+    "bundlesize": [
+      {
+        "path": "./build/static/js/*.js",
+        "maxSize": "300 kB"
+      },
+      {
+        "path": "./build/static/css/*.css",
+        "maxSize": "50 kB"
+      }
+    ]
+  }
+  ```
+  - Lighthouse performance and accessibility audits
+  - Bundle size monitoring and budgets
+  - Core Web Vitals optimization
+
+### Offline Functionality Verification
+- [ ] **Ensure React app works completely offline**
+  ```javascript
+  // src/serviceWorker.js - Enable offline functionality
+  const isLocalhost = Boolean(
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '[::1]' ||
+    window.location.hostname.match(
+      /^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/
+    )
+  );
+  
+  export function register(config) {
+    if ('serviceWorker' in navigator) {
+      // Register service worker for offline functionality
+      navigator.serviceWorker.register('/sw.js')
+        .then(registration => {
+          console.log('SW registered: ', registration);
+        })
+        .catch(registrationError => {
+          console.log('SW registration failed: ', registrationError);
+        });
+    }
+  }
+  ```
+  ```javascript
+  // public/sw.js - Service worker for offline caching
+  const CACHE_NAME = 'stamp-maker-v1';
+  const urlsToCache = [
+    '/',
+    '/static/js/bundle.js',
+    '/static/css/main.css',
+    '/manifest.json'
+  ];
+  
+  self.addEventListener('install', event => {
+    event.waitUntil(
+      caches.open(CACHE_NAME)
+        .then(cache => cache.addAll(urlsToCache))
+    );
+  });
+  
+  self.addEventListener('fetch', event => {
+    event.respondWith(
+      caches.match(event.request)
+        .then(response => {
+          return response || fetch(event.request);
+        })
+    );
+  });
+  ```
+  - Service worker implementation for offline functionality
+  - Asset caching strategy
+  - Network fallback handling
+
+### Final Deployment Checklist
+- [ ] **Complete pre-deployment verification**
+  ```bash
+  # Final build and verification script
+  #!/bin/bash
+  
+  echo "🚀 Starting deployment preparation..."
+  
+  # Clean previous builds
+  rm -rf build/
+  
+  # Install dependencies
+  npm ci
+  
+  # Run all tests
+  npm test -- --coverage --watchAll=false
+  
+  # Run linting
+  npm run lint
+  
+  # Build for production
+  npm run build
+  
+  # Run bundle analysis
+  npx webpack-bundle-analyzer build/static/js/*.js --report --mode static --report-filename bundle-report.html
+  
+  # Test production build locally
+  npx serve -s build -p 3001 &
+  SERVER_PID=$!
+  
+  # Wait for server to start
+  sleep 5
+  
+  # Run end-to-end tests against production build
+  npx playwright test --config=playwright.prod.config.js
+  
+  # Run Lighthouse audit
+  npx lighthouse http://localhost:3001 --output html --output-path ./lighthouse-report.html
+  
+  # Clean up
+  kill $SERVER_PID
+  
+  echo "✅ Deployment preparation complete!"
+  echo "📊 Check bundle-report.html and lighthouse-report.html for optimization opportunities"
+  ```
+  - Automated deployment preparation script
+  - Comprehensive testing and validation
+  - Performance and bundle analysis
+
+### Production Ready Verification
+- [ ] **Final verification that React app meets all requirements**
+  ```javascript
+  // Deployment checklist validation
+  const deploymentChecklist = {
+    // Core functionality
+    fileUpload: '✅ PNG file upload with drag-and-drop works',
+    backgroundRemoval: '✅ Color-to-alpha background removal implemented',
+    lineSelection: '✅ All line types (horizontal, vertical, letter) selectable',
+    zoomFunctionality: '✅ 5x zoom with pixel precision works',
+    manualInput: '✅ Number inputs sync with visual lines',
+    jsonExport: '✅ Exports valid stamp file JSON format',
+    
+    // Technical requirements
+    reactArchitecture: '✅ Built with React 18+ and modern hooks',
+    stateManagement: '✅ Centralized state with proper updates',
+    errorHandling: '✅ Comprehensive error boundaries and validation',
+    accessibility: '✅ WCAG 2.1 AA compliant with keyboard navigation',
+    performance: '✅ Bundle size < 300KB, loads in < 3s',
+    crossBrowser: '✅ Works in Chrome, Firefox, Safari, Edge',
+    offline: '✅ Functions completely offline',
+    
+    // Code quality
+    testing: '✅ >90% test coverage with unit, integration, e2e tests',
+    documentation: '✅ Comprehensive JSDoc comments and README',
+    linting: '✅ ESLint and Prettier configured with no errors',
+    typeScript: '✅ PropTypes or TypeScript for type safety',
+    
+    // User experience
+    responsive: '✅ Works on desktop and tablet devices',
+    feedback: '✅ Loading states, success/error messages',
+    validation: '✅ Real-time input validation and error messages',
+    workflow: '✅ Intuitive step-by-step stamp creation process'
+  };
+  
+  console.log('🎯 Deployment Readiness Check:');
+  Object.entries(deploymentChecklist).forEach(([key, status]) => {
+    console.log(`${status}`);
+  });
+  ```
+  - Complete requirements verification
+  - Technical implementation validation
+  - User experience confirmation
+  - Code quality assurance
+
+### Ready for Production
+- [ ] **Final confirmation of production readiness**
+  - ✅ React application successfully creates stamp files matching exact specification
+  - ✅ All UI interactions are smooth and responsive with proper feedback
+  - ✅ Error handling is comprehensive with user-friendly messages
+  - ✅ Code is clean, well-documented, and follows React best practices
+  - ✅ Application meets 100% of requirements from `spec/requirements.md`
+  - ✅ Performance metrics meet or exceed targets (< 3s load, < 300KB bundle)
+  - ✅ Accessibility compliance verified with automated and manual testing
+  - ✅ Cross-browser compatibility confirmed across all target browsers
+  - ✅ Offline functionality works without external dependencies
+  - ✅ Test coverage > 90% with comprehensive test suite
+  - ✅ Production build optimized and ready for deployment
