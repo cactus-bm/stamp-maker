@@ -180,25 +180,34 @@ dropZone.addEventListener('drop', (e) => {
 
 ### Background Removal Algorithm
 ```javascript
-function removeBackground(clickX, clickY) {
-  const imageData = canvas.getImageData(0, 0, width, height);
-  const targetColor = getPixelColor(clickX, clickY);
+function removeBackground(imageData, targetColour) {
+  const [tr, tg, tb] = targetColor.map(c => c / 255);
+  const result = new ImageData(imageData.width, imageData.height);
+  const data = result.data;
   
   for (let i = 0; i < imageData.data.length; i += 4) {
-    const r = imageData.data[i];
-    const g = imageData.data[i + 1];
-    const b = imageData.data[i + 2];
+    const r = imageData.data[i] / 255;
+    const g = imageData.data[i + 1] / 255;
+    const b = imageData.data[i + 2] / 255;
+
+    let alphaRatio = 1;
+    if (tr > 0) alphaRatio = Math.min(alphaRatio, r / tr);
+    if (tg > 0) alphaRatio = Math.min(alphaRatio, g / tg);
+    if (tb > 0) alphaRatio = Math.min(alphaRatio, b / tb);
     
-    if (colorMatches(r, g, b, targetColor)) {
-      imageData.data[i + 3] = 0; // Set alpha to 0
-    } else {
-      // Calculate similarity for semi-transparency
-      const similarity = calculateColorSimilarity(r, g, b, targetColor);
-      imageData.data[i + 3] *= (1 - similarity);
-    }
+    alphaRatio = Math.min(alphaRatio, 1); // Clamp
+    const alpha = 1 - alphaRatio;
+    const newR = (r - tr * (1 - alpha)) / (alpha || 1);
+    const newG = (g - tg * (1 - alpha)) / (alpha || 1);
+    const newB = (b - tb * (1 - alpha)) / (alpha || 1);
+
+    data[i]     = Math.round(Math.max(0, Math.min(1, newR)) * 255);
+    data[i + 1] = Math.round(Math.max(0, Math.min(1, newG)) * 255);
+    data[i + 2] = Math.round(Math.max(0, Math.min(1, newB)) * 255);
+    data[i + 3] = Math.round(alpha * 255);
   }
   
-  canvas.putImageData(imageData, 0, 0);
+  return result;
 }
 ```
 
