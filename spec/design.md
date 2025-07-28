@@ -1,7 +1,7 @@
 # Image Manipulation Web Application - Design Document
 
 ## Overview
-This document outlines the technical design for a client-side web application that performs basic image manipulation on PNG files. The application will be built using HTML5, CSS3, and JavaScript without requiring any backend services.
+This document outlines the technical design for a client-side web application that creates stamp files from PNG images. The application focuses on background removal and precise line selection for stamp creation with user-entered data. The application will be built using HTML5, CSS3, and JavaScript without requiring any backend services.
 
 ## System Architecture
 
@@ -12,6 +12,7 @@ styles.css          # Application styling
 app.js              # Main application logic
 imageProcessor.js   # Image manipulation utilities
 lineManager.js      # Line selection and overlay management
+zoomManager.js      # Small zoom screen for precise selection
 dataExporter.js     # JSON export functionality
 ```
 
@@ -30,9 +31,11 @@ dataExporter.js     # JSON export functionality
 - **Purpose**: Handle image loading, display, and manipulation
 - **Key Functions**:
   - `loadImage(file)`: Load PNG file into canvas
-  - `removeBackground(x, y)`: Perform color-to-alpha conversion
+  - `removeBackground(imageData, targetColor)`: Perform color-to-alpha conversion using updated algorithm
   - `getPixelColor(x, y)`: Get color at specific coordinates
-  - `applyColorToAlpha(targetColor)`: Convert color to transparency
+  - `storeOriginalImage()`: Store original image data
+  - `storeProcessedImage()`: Store background-removed image data
+  - `getBase64ImageData()`: Export processed image as base64 string
 
 #### 3. Line Manager (`lineManager.js`)
 - **Purpose**: Manage line selection, display, and coordinate storage
@@ -43,12 +46,21 @@ dataExporter.js     # JSON export functionality
   - `updateLinePosition(type, value)`: Update line from manual input
   - `renderAllLines()`: Redraw all placed lines
 
-#### 4. Data Exporter (`dataExporter.js`)
+#### 4. Zoom Manager (`zoomManager.js`)
+- **Purpose**: Provide small zoom screen for precise pixel selection
+- **Key Functions**:
+  - `showZoom(x, y)`: Display zoomed view around cursor position
+  - `hideZoom()`: Hide zoom screen
+  - `updateZoomPosition(x, y)`: Update zoom view as cursor moves
+  - `getZoomedPixelColor(x, y)`: Get precise pixel color from zoom view
+
+#### 5. Data Exporter (`dataExporter.js`)
 - **Purpose**: Handle data serialization and JSON export
 - **Key Functions**:
   - `collectData()`: Gather all application state
-  - `exportToJSON()`: Create and download JSON file
+  - `exportToJSON()`: Create and download stamp file
   - `validateData()`: Ensure data completeness
+  - `calculateFontSize()`: Calculate fontSize from textLine and topLine/headerEnd
 
 ## Data Models
 
@@ -59,6 +71,7 @@ const appState = {
     file: null,
     canvas: null,
     originalData: null,
+    processedData: null, // Background-removed image data
     width: 0,
     height: 0
   },
@@ -74,7 +87,9 @@ const appState = {
   },
   ui: {
     activeMode: null, // 'background', 'headerEnd', 'footerStart', etc.
-    name: ''
+    name: '',
+    zoomVisible: false,
+    zoomPosition: { x: 0, y: 0 }
   },
   settings: {
     backgroundRemoved: false,
@@ -83,42 +98,42 @@ const appState = {
 }
 ```
 
-### JSON Export Format
+### Stamp File Export Format
 ```javascript
 {
   "name": "user-entered-name", // value entered in the name field
   "type": "SYNDICATE", // hard-coded to SYNDICATE
   "referenceHeight": 600, // height of the image
-  "headerBottom": 150, // value choosen for headerEnd
-  "footerTop": 250, // value choosen for footerStart
-  "fontSize": 73, // value choosen for textLine - (topLine ?? headerEnd) 
+  "headerBottom": 150, // value chosen for headerEnd
+  "footerTop": 250, // value chosen for footerStart
+  "fontSize": 73, // value chosen for textLine - (topLine ?? headerBottom) 
   "leftStart": {
-    "x": 100, // value choosen for leftStart 
+    "x": 100, // value chosen for leftStart 
     "y": 225 // value chosen for textLine
   },
   "rightStart": {
-    "x": 700, // value choosen for rightStart
+    "x": 700, // value chosen for rightStart
     "y": 225 // value chosen for textLine
   },
   "baseCoordinate": [
     {
-      "x": 150, // value choosen for letterLine[0]
+      "x": 150, // value chosen for letterLine[0]
       "y": 225 // value chosen for textLine
     },
     {
-      "x": 250, // value choosen for letterLine[1]
+      "x": 250, // value chosen for letterLine[1]
       "y": 225 // value chosen for textLine
     },
     {
-      "x": 350, // value choosen for letterLine[2]
+      "x": 350, // value chosen for letterLine[2]
       "y": 225 // value chosen for textLine
     },
     {
-      "x": 450, // value choosen for letterLine[3]
+      "x": 450, // value chosen for letterLine[3]
       "y": 225 // value chosen for textLine
     },
     {
-      "x": 550, // value choosen for letterLine[4]
+      "x": 550, // value chosen for letterLine[4]
       "y": 225 // value chosen for textLine
     }
   ],
@@ -126,7 +141,7 @@ const appState = {
     "x": 0, 
     "y": 0
   },
-  "imageData": "" // base64 encoded image data with background removed.
+  "imageData": "" // base64 encoded image data with background removed
 }
 ```
 
@@ -135,7 +150,7 @@ const appState = {
 ### Layout Structure
 ```
 ┌─────────────────────────────────────────┐
-│ Header: Image Manipulation Tool         │
+│ Header: Stamp Maker Tool                │
 ├─────────────────────────────────────────┤
 │ File Upload Area (Drag & Drop)          │
 ├─────────────────────────────────────────┤
@@ -143,19 +158,23 @@ const appState = {
 │ [Remove Background] [Name: _______]     │
 │                                         │
 │ Horizontal Lines:                       │
-│ [Header End] [___] [Footer Start] [___] │
-│ [Text Line] [___] [Baseline] [___]      │
-│ [Top Line] [___]                        │
+│ [Header End] [123] [Footer Start] [456] │
+│ [Text Line] [300] [Baseline] [457]      │
+│ [Top Line] [122]                        │
 │                                         │
 │ Vertical Lines:                         │
-│ [Left Start] [___] [Right Start] [___]  │
+│ [Left Start] [100] [Right Start] [700]  │
 │ [Add Letter Lines] (toggle)             │
+│ Letter Lines: [120] [140] [160] ...     │
 │                                         │
-│ [Save JSON]                             │
+│ [Save Stamp File]                       │
 ├─────────────────────────────────────────┤
-│                                         │
-│        Image Display Canvas             │
-│                                         │
+│ ┌─────────────────┐ ┌─────┐             │
+│ │                 │ │Zoom │             │
+│ │  Image Display  │ │ 5x  │             │
+│ │     Canvas      │ │     │             │
+│ │                 │ └─────┘             │
+│ └─────────────────┘                     │
 └─────────────────────────────────────────┘
 ```
 
@@ -251,17 +270,91 @@ class LineManager {
 ### Manual Input Synchronization
 ```javascript
 function setupManualInputs() {
-  document.querySelectorAll('.line-input').forEach(input => {
+  document.querySelectorAll('input[type="number"].line-input').forEach(input => {
     input.addEventListener('input', (e) => {
       const lineType = e.target.dataset.lineType;
       const value = parseInt(e.target.value);
       
-      if (!isNaN(value)) {
+      if (!isNaN(value) && value >= 0) {
         lineManager.updateLinePosition(lineType, value);
         lineManager.renderAllLines();
+        
+        // Update application state
+        appState.lines[lineType] = value;
       }
     });
   });
+}
+```
+
+### Zoom Functionality Implementation
+```javascript
+class ZoomManager {
+  constructor(canvas, zoomCanvas) {
+    this.mainCanvas = canvas;
+    this.zoomCanvas = zoomCanvas;
+    this.zoomFactor = 5;
+    this.zoomSize = 100; // 100x100 pixel zoom area
+    this.visible = false;
+  }
+  
+  showZoom(x, y) {
+    this.visible = true;
+    this.updateZoomPosition(x, y);
+    this.zoomCanvas.style.display = 'block';
+  }
+  
+  hideZoom() {
+    this.visible = false;
+    this.zoomCanvas.style.display = 'none';
+  }
+  
+  updateZoomPosition(x, y) {
+    if (!this.visible) return;
+    
+    const ctx = this.zoomCanvas.getContext('2d');
+    const mainCtx = this.mainCanvas.getContext('2d');
+    
+    // Clear zoom canvas
+    ctx.clearRect(0, 0, this.zoomCanvas.width, this.zoomCanvas.height);
+    
+    // Calculate source area (centered on cursor)
+    const sourceSize = this.zoomSize / this.zoomFactor;
+    const sourceX = x - sourceSize / 2;
+    const sourceY = y - sourceSize / 2;
+    
+    // Draw zoomed portion
+    ctx.imageSmoothingEnabled = false; // Pixelated zoom
+    ctx.drawImage(
+      this.mainCanvas,
+      sourceX, sourceY, sourceSize, sourceSize,
+      0, 0, this.zoomCanvas.width, this.zoomCanvas.height
+    );
+    
+    // Draw crosshair
+    ctx.strokeStyle = '#ff0000';
+    ctx.lineWidth = 1;
+    const centerX = this.zoomCanvas.width / 2;
+    const centerY = this.zoomCanvas.height / 2;
+    
+    ctx.beginPath();
+    ctx.moveTo(centerX - 10, centerY);
+    ctx.lineTo(centerX + 10, centerY);
+    ctx.moveTo(centerX, centerY - 10);
+    ctx.lineTo(centerX, centerY + 10);
+    ctx.stroke();
+  }
+  
+  getZoomedPixelColor(x, y) {
+    const ctx = this.mainCanvas.getContext('2d');
+    const imageData = ctx.getImageData(x, y, 1, 1);
+    return {
+      r: imageData.data[0],
+      g: imageData.data[1],
+      b: imageData.data[2],
+      a: imageData.data[3]
+    };
+  }
 }
 ```
 
