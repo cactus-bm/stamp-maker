@@ -1,7 +1,24 @@
 # Image Manipulation Web Application Requirements
 
 ## Overview
-This web application will provide basic image manipulation capabilities for PNG files, focusing on background removal and line selection for text processing and layout analysis.
+This is a client-side web application that runs entirely in the browser without requiring any backend services. The application will provide basic image manipulation capabilities for PNG files, focusing on background removal and line selection for text processing and layout analysis. All image processing and data manipulation will be performed using JavaScript and HTML5 Canvas API.
+
+## Technical Architecture
+
+### Frontend-Only Implementation
+- **No Backend Required**: The application runs entirely in the web browser
+- **Client-Side Processing**: All image manipulation is performed using JavaScript
+- **HTML5 Canvas**: Used for image display, overlay rendering, and pixel manipulation
+- **Local File Handling**: PNG files are processed locally using the File API
+- **Browser Storage**: All data is stored locally in the browser (localStorage or as downloadable files)
+- **No Server Communication**: No network requests or server-side processing required
+
+### Technology Stack
+- **HTML5**: Structure and file input handling
+- **CSS3**: Styling and responsive layout
+- **JavaScript (ES6+)**: Core application logic and image processing
+- **Canvas API**: Image rendering and pixel manipulation
+- **File API**: Local file reading and processing
 
 ## Core Functionality
 
