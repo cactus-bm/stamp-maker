@@ -270,381 +270,2856 @@ This document contains a comprehensive checklist of tasks needed to implement th
   };
   ```
 
-## HTML Structure Implementation
+## React Component Implementation
 
-### Basic Layout
-- [ ] **Add header section with "Stamp Maker Tool" title**
-  ```html
-  <header>
-    <h1>Stamp Maker Tool</h1>
-  </header>
-  ```
-
-- [ ] **Create file upload area with drag-and-drop zone styling**
-  ```html
-  <section id="upload-area" class="upload-zone">
-    <div class="upload-content">
-      <p>Drag & Drop PNG file here or <button id="file-select-btn">Select File</button></p>
-      <input type="file" id="file-input" accept=".png" style="display: none;">
-      <div id="file-info" style="display: none;"></div>
-    </div>
-  </section>
+### FileUpload Component
+- [ ] **Implement FileUpload component with drag-and-drop functionality**
+  ```jsx
+  import React, { useState, useCallback } from 'react';
+  
+  const FileUpload = ({ onFileUpload, currentFile }) => {
+    const [dragOver, setDragOver] = useState(false);
+    
+    const handleDragOver = useCallback((e) => {
+      e.preventDefault();
+      setDragOver(true);
+    }, []);
+    
+    const handleDragLeave = useCallback((e) => {
+      e.preventDefault();
+      setDragOver(false);
+    }, []);
+    
+    const handleDrop = useCallback((e) => {
+      e.preventDefault();
+      setDragOver(false);
+      const files = e.dataTransfer.files;
+      if (files[0] && files[0].type === 'image/png') {
+        onFileUpload(files[0]);
+      } else {
+        alert('Please upload a PNG file only.');
+      }
+    }, [onFileUpload]);
+    
+    const handleFileSelect = useCallback((e) => {
+      const file = e.target.files[0];
+      if (file && file.type === 'image/png') {
+        onFileUpload(file);
+      }
+    }, [onFileUpload]);
+    
+    return (
+      <section 
+        className={`upload-zone ${dragOver ? 'drag-over' : ''}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <div className="upload-content">
+          {currentFile ? (
+            <p>Loaded: {currentFile.name}</p>
+          ) : (
+            <>
+              <p>Drag & Drop PNG file here or</p>
+              <button onClick={() => document.getElementById('file-input').click()}>
+                Select File
+              </button>
+              <input 
+                type="file" 
+                id="file-input" 
+                accept=".png" 
+                style={{ display: 'none' }}
+                onChange={handleFileSelect}
+              />
+            </>
+          )}
+        </div>
+      </section>
+    );
+  };
+  
+  export default FileUpload;
   ```
   - Must accept PNG files only as per requirements
-  - Users can drag and drop a PNG file into the application
-  - The uploaded image is displayed on screen for manipulation
+  - Visual feedback for drag-over state
+  - Error handling for invalid file types
 
-- [ ] **Add control panel container div**
-  ```html
-  <section id="control-panel" class="control-panel">
-    <!-- All controls will be added here -->
-  </section>
+- [ ] **Implement ControlPanel component container**
+  ```jsx
+  import React from 'react';
+  import NameInput from './NameInput';
+  import BackgroundRemoval from './BackgroundRemoval';
+  import LineControls from './LineControls';
+  import ExportButton from './ExportButton';
+  
+  const ControlPanel = ({ appState, onStateUpdate }) => {
+    return (
+      <section className="control-panel">
+        <NameInput 
+          value={appState.ui.name}
+          onChange={(name) => onStateUpdate({ ui: { ...appState.ui, name } })}
+        />
+        
+        <BackgroundRemoval 
+          backgroundRemoved={appState.settings.backgroundRemoved}
+          onRemoveBackground={() => onStateUpdate({ 
+            ui: { ...appState.ui, activeMode: 'background' }
+          })}
+        />
+        
+        <LineControls 
+          lines={appState.lines}
+          activeMode={appState.ui.activeMode}
+          onLineUpdate={(lineType, value) => onStateUpdate({
+            lines: { ...appState.lines, [lineType]: value }
+          })}
+          onModeChange={(mode) => onStateUpdate({
+            ui: { ...appState.ui, activeMode: mode }
+          })}
+        />
+        
+        <ExportButton 
+          appState={appState}
+          disabled={!appState.image.file}
+        />
+      </section>
+    );
+  };
+  
+  export default ControlPanel;
   ```
+  - Container for all control components
+  - Manages state updates through props
 
-- [ ] **Create name input field (text type)**
-  ```html
-  <div class="name-section">
-    <label for="name-input">Name:</label>
-    <input type="text" id="name-input" placeholder="Enter name for stamp file">
-  </div>
+### Individual Control Components
+- [ ] **Create NameInput component**
+  ```jsx
+  import React from 'react';
+  
+  const NameInput = ({ value, onChange }) => {
+    return (
+      <div className="name-section">
+        <label htmlFor="name-input">Name:</label>
+        <input 
+          type="text" 
+          id="name-input" 
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Enter name for stamp file"
+        />
+      </div>
+    );
+  };
+  
+  export default NameInput;
   ```
-  - Text input box for entering a name associated with the image
-  - This value will be exported in the "name" field of the stamp file
+  - Controlled input with React state
+  - Value exported in "name" field of stamp file
 
-- [ ] **Add "Remove Background" button**
-  ```html
-  <div class="background-section">
-    <button id="remove-bg-btn" class="action-btn">Remove Background</button>
-    <span id="bg-status"></span>
-  </div>
+- [ ] **Create BackgroundRemoval component**
+  ```jsx
+  import React from 'react';
+  
+  const BackgroundRemoval = ({ backgroundRemoved, onRemoveBackground }) => {
+    return (
+      <div className="background-section">
+        <button 
+          className="action-btn"
+          onClick={onRemoveBackground}
+          disabled={backgroundRemoved}
+        >
+          {backgroundRemoved ? 'Background Removed' : 'Remove Background'}
+        </button>
+        {backgroundRemoved && <span className="status">✓ Complete</span>}
+      </div>
+    );
+  };
+  
+  export default BackgroundRemoval;
   ```
   - Initiates background removal mode
-  - User clicks on a pixel in the image to select the color to remove
-  - Small zoom screen will be displayed for precise pixel selection
+  - Shows completion status
 
-- [ ] **Create horizontal lines section with buttons and number inputs**
-  ```html
-  <div class="horizontal-lines-section">
-    <h3>Horizontal Lines:</h3>
-    <div class="line-controls">
-      <!-- Individual line controls will be added in form elements tasks -->
-    </div>
-  </div>
-  ```
-  - All horizontal line selections provide visual feedback with cursor-following lines
-  - Y-coordinates are stored relative to original image dimensions (y=0 at top)
-
-- [ ] **Create vertical lines section with buttons and number inputs**
-  ```html
-  <div class="vertical-lines-section">
-    <h3>Vertical Lines:</h3>
-    <div class="line-controls">
-      <!-- Individual line controls will be added in form elements tasks -->
-    </div>
-    <div id="letter-lines-container">
-      <!-- Dynamically added letter line inputs will appear here -->
-    </div>
-  </div>
-  ```
-  - X-coordinates are stored relative to original image dimensions
-
-- [ ] **Add "Save Stamp File" button**
-  ```html
-  <div class="export-section">
-    <button id="save-btn" class="primary-btn">Save Stamp File</button>
-    <div id="export-status"></div>
-  </div>
-  ```
-  - Exports all collected data to a JSON file with specific stamp file format
-
-- [ ] **Create main canvas element for image display**
-  ```html
-  <div class="canvas-container">
-    <canvas id="main-canvas"></canvas>
-    <canvas id="overlay-canvas"></canvas>
-  </div>
-  ```
-  - Main canvas displays the loaded image
-  - Overlay canvas for drawing selection lines (lines drawn as overlays, not modifying original)
-  - Application maintains original image data separate from visual overlay
-
-- [ ] **Create zoom canvas element (initially hidden)**
-  ```html
-  <div id="zoom-container" class="zoom-container" style="display: none;">
-    <canvas id="zoom-canvas" width="100" height="100"></canvas>
-    <div class="zoom-label">Zoom 5x</div>
-  </div>
-  ```
-  - 100x100 pixel zoom area with 5x magnification
-  - Small zoomed view for precise pixel selection during all line operations
-
-- [ ] **Add proper semantic HTML structure and accessibility attributes**
-  ```html
-  <!-- Add to existing elements -->
-  <main role="main">
-    <!-- All main content -->
-  </main>
+- [ ] **Create LineControls component with all line selection buttons**
+  ```jsx
+  import React from 'react';
+  import LineControl from './LineControl';
+  import LetterLines from './LetterLines';
   
-  <!-- Add ARIA labels -->
-  <button aria-label="Remove background from image">Remove Background</button>
-  <input aria-label="Y-coordinate for header end line" type="number">
+  const LineControls = ({ lines, activeMode, onLineUpdate, onModeChange }) => {
+    const horizontalLines = [
+      { key: 'headerEnd', label: 'Header End', exportAs: 'headerBottom' },
+      { key: 'footerStart', label: 'Footer Start', exportAs: 'footerTop' },
+      { key: 'textLine', label: 'Text Line', exportAs: 'textLine' },
+      { key: 'baseline', label: 'Baseline', optional: true },
+      { key: 'topLine', label: 'Top Line', optional: true }
+    ];
+    
+    const verticalLines = [
+      { key: 'leftStart', label: 'Left Start', coordinate: 'x' },
+      { key: 'rightStart', label: 'Right Start', coordinate: 'x' }
+    ];
+    
+    return (
+      <div className="line-controls">
+        <div className="horizontal-lines-section">
+          <h3>Horizontal Lines:</h3>
+          <div className="line-controls-grid">
+            {horizontalLines.map(line => (
+              <LineControl
+                key={line.key}
+                lineType={line.key}
+                label={line.label}
+                value={lines[line.key]}
+                active={activeMode === line.key}
+                optional={line.optional}
+                coordinate="y"
+                onActivate={() => onModeChange(line.key)}
+                onValueChange={(value) => onLineUpdate(line.key, value)}
+              />
+            ))}
+          </div>
+        </div>
+        
+        <div className="vertical-lines-section">
+          <h3>Vertical Lines:</h3>
+          <div className="line-controls-grid">
+            {verticalLines.map(line => (
+              <LineControl
+                key={line.key}
+                lineType={line.key}
+                label={line.label}
+                value={lines[line.key]}
+                active={activeMode === line.key}
+                coordinate="x"
+                onActivate={() => onModeChange(line.key)}
+                onValueChange={(value) => onLineUpdate(line.key, value)}
+              />
+            ))}
+          </div>
+          
+          <LetterLines 
+            letterLines={lines.letterLines}
+            active={activeMode === 'letterLines'}
+            onToggle={() => onModeChange(activeMode === 'letterLines' ? null : 'letterLines')}
+            onUpdate={(letterLines) => onLineUpdate('letterLines', letterLines)}
+          />
+        </div>
+      </div>
+    );
+  };
+  
+  export default LineControls;
   ```
+  - Renders all line selection controls
+  - Manages active states and mode switching
 
-### Form Elements
-- [ ] **Add "Header End" button with corresponding number input**
-  ```html
-  <div class="line-control">
-    <button id="header-end-btn" class="line-btn" data-line-type="headerEnd">Header End</button>
-    <input type="number" id="header-end-input" class="line-input" data-line-type="headerEnd" min="0" placeholder="Y">
-  </div>
+- [ ] **Create reusable LineControl component**
+  ```jsx
+  import React from 'react';
+  
+  const LineControl = ({ 
+    lineType, 
+    label, 
+    value, 
+    active, 
+    optional, 
+    coordinate, 
+    onActivate, 
+    onValueChange 
+  }) => {
+    return (
+      <div className="line-control">
+        <button 
+          className={`line-btn ${active ? 'active' : ''}`}
+          onClick={onActivate}
+          data-line-type={lineType}
+        >
+          {label}
+        </button>
+        <input 
+          type="number" 
+          className="line-input"
+          value={value || ''}
+          onChange={(e) => onValueChange(parseInt(e.target.value) || null)}
+          min="0" 
+          placeholder={`${coordinate.toUpperCase()}${optional ? ' (optional)' : ''}`}
+        />
+      </div>
+    );
+  };
+  
+  export default LineControl;
   ```
-  - Visual feedback: Horizontal line follows mouse cursor when button is active
-  - Click to place horizontal line on image view (overlay only)
-  - Store Y-coordinate, export as "headerBottom" in stamp file
+  - Reusable component for all line types
+  - Handles both button activation and number input
+  - Visual feedback for active state
 
-- [ ] **Add "Footer Start" button with corresponding number input**
-  ```html
-  <div class="line-control">
-    <button id="footer-start-btn" class="line-btn" data-line-type="footerStart">Footer Start</button>
-    <input type="number" id="footer-start-input" class="line-input" data-line-type="footerStart" min="0" placeholder="Y">
-  </div>
+- [ ] **Create LetterLines component for dynamic line management**
+  ```jsx
+  import React from 'react';
+  
+  const LetterLines = ({ letterLines, active, onToggle, onUpdate }) => {
+    const addLetterLine = (x) => {
+      onUpdate([...letterLines, x]);
+    };
+    
+    const updateLetterLine = (index, value) => {
+      const updated = [...letterLines];
+      updated[index] = value;
+      onUpdate(updated);
+    };
+    
+    const removeLetterLine = (index) => {
+      const updated = letterLines.filter((_, i) => i !== index);
+      onUpdate(updated);
+    };
+    
+    return (
+      <div className="letter-lines-section">
+        <div className="line-control">
+          <button 
+            className={`toggle-btn ${active ? 'active' : ''}`}
+            onClick={onToggle}
+          >
+            Add Letter Lines
+          </button>
+          <span className="toggle-status">
+            {active ? 'Click on image to add lines' : 'Click to start adding letter lines'}
+          </span>
+        </div>
+        
+        {letterLines.length > 0 && (
+          <div className="letter-lines-list">
+            <h4>Letter Lines:</h4>
+            <div className="letter-inputs-container">
+              {letterLines.map((x, index) => (
+                <div key={index} className="letter-line-item">
+                  <input 
+                    type="number" 
+                    className="letter-line-input"
+                    value={x}
+                    onChange={(e) => updateLetterLine(index, parseInt(e.target.value) || 0)}
+                    min="0" 
+                    placeholder="X"
+                  />
+                  <button 
+                    className="remove-btn"
+                    onClick={() => removeLetterLine(index)}
+                    aria-label={`Remove letter line ${index + 1}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+  
+  export default LetterLines;
   ```
-  - Store Y-coordinate, export as "footerTop" in stamp file
-
-- [ ] **Add "Text Line" button with corresponding number input**
-  ```html
-  <div class="line-control">
-    <button id="text-line-btn" class="line-btn" data-line-type="textLine">Text Line</button>
-    <input type="number" id="text-line-input" class="line-input" data-line-type="textLine" min="0" placeholder="Y">
-  </div>
-  ```
-  - Used for calculating fontSize and as Y-coordinate for leftStart/rightStart/baseCoordinate
-
-- [ ] **Add "Baseline" button with corresponding number input (optional)**
-  ```html
-  <div class="line-control">
-    <button id="baseline-btn" class="line-btn" data-line-type="baseline">Baseline</button>
-    <input type="number" id="baseline-input" class="line-input" data-line-type="baseline" min="0" placeholder="Y (optional)">
-  </div>
-  ```
-  - Default behavior: If not selected, defaults to 1 pixel below the footer start line
-
-- [ ] **Add "Top Line" button with corresponding number input (optional)**
-  ```html
-  <div class="line-control">
-    <button id="top-line-btn" class="line-btn" data-line-type="topLine">Top Line</button>
-    <input type="number" id="top-line-input" class="line-input" data-line-type="topLine" min="0" placeholder="Y (optional)">
-  </div>
-  ```
-  - Default behavior: If not selected, defaults to 1 pixel above the header end line
-  - Used in fontSize calculation: fontSize = textLine - (topLine ?? headerBottom)
-
-- [ ] **Add "Left Start" button with corresponding number input**
-  ```html
-  <div class="line-control">
-    <button id="left-start-btn" class="line-btn" data-line-type="leftStart">Left Start</button>
-    <input type="number" id="left-start-input" class="line-input" data-line-type="leftStart" min="0" placeholder="X">
-  </div>
-  ```
-  - Vertical line selection, store X-coordinate
-  - Export as leftStart: {x: value, y: textLine}
-
-- [ ] **Add "Right Start" button with corresponding number input**
-  ```html
-  <div class="line-control">
-    <button id="right-start-btn" class="line-btn" data-line-type="rightStart">Right Start</button>
-    <input type="number" id="right-start-input" class="line-input" data-line-type="rightStart" min="0" placeholder="X">
-  </div>
-  ```
-  - Export as rightStart: {x: value, y: textLine}
-
-- [ ] **Add "Add Letter Lines" toggle button**
-  ```html
-  <div class="line-control">
-    <button id="letter-lines-btn" class="toggle-btn" data-active="false">Add Letter Lines</button>
-    <span class="toggle-status">Click to start adding letter lines</span>
-  </div>
-  ```
-  - Continuous mode: While button is active, each click adds a new vertical line
-  - Deactivation: Click the button again or click outside the image area
-
-- [ ] **Create container for dynamically added letter line inputs**
-  ```html
-  <div id="letter-lines-list" class="letter-lines-list">
-    <h4>Letter Lines:</h4>
-    <div id="letter-inputs-container">
-      <!-- Dynamic inputs will be added here like: -->
-      <!-- <input type="number" class="letter-line-input" data-index="0" min="0" placeholder="X"> -->
-    </div>
-  </div>
-  ```
-  - Each letter line gets its own number input for manual adjustment
+  - Dynamic array management with React
+  - Add/remove letter lines functionality
   - Export as baseCoordinate array: [{x: value, y: textLine}, ...]
 
-- [ ] **Set all coordinate inputs to `type="number"` with appropriate min values**
-  - All coordinate inputs must be `type="number"` for better UX
-  - Set `min="0"` since coordinates cannot be negative
-  - Manual input fields allow precise adjustment and update lines on screen
-  - Input validation: non-negative integers only
+- [ ] **Create ExportButton component**
+  ```jsx
+  import React from 'react';
+  import { exportStampFile } from '../utils/dataExporter';
+  
+  const ExportButton = ({ appState, disabled }) => {
+    const handleExport = () => {
+      try {
+        exportStampFile(appState);
+      } catch (error) {
+        alert('Export failed: ' + error.message);
+      }
+    };
+    
+    return (
+      <div className="export-section">
+        <button 
+          className="primary-btn"
+          onClick={handleExport}
+          disabled={disabled}
+        >
+          Save Stamp File
+        </button>
+        {disabled && (
+          <div className="export-status">
+            Please upload an image first
+          </div>
+        )}
+      </div>
+    );
+  };
+  
+  export default ExportButton;
+  ```
+  - Exports data to JSON file with specific stamp file format
+  - Error handling and user feedback
 
 ## CSS Styling Implementation
 
-### Layout Styling
-- [ ] Style the header section with appropriate typography
-- [ ] Create responsive grid layout for control panel
-- [ ] Style the file upload drag-and-drop area with visual feedback
-- [ ] Style buttons with consistent design and hover states
-- [ ] Style number inputs with consistent appearance
-- [ ] Position the main canvas in the display area
-- [ ] Position and style the zoom canvas (100x100px, initially hidden)
-- [ ] Add responsive design for different screen sizes
+### Main Application Styling
+- [ ] **Create App.css with main layout and theme**
+  ```css
+  .App {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  
+  .App-header {
+    background-color: #282c34;
+    padding: 1rem;
+    color: white;
+    text-align: center;
+  }
+  
+  .App-header h1 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 300;
+  }
+  
+  .App-main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 2rem;
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  
+  @media (max-width: 768px) {
+    .App-main {
+      grid-template-columns: 1fr;
+      padding: 1rem;
+    }
+  }
+  ```
 
-### Visual Feedback Styling
-- [ ] Create CSS classes for active button states
-- [ ] Style drag-over states for file upload area
-- [ ] Add loading/processing visual indicators
-- [ ] Style line overlays on canvas (different colors for different line types)
-- [ ] Create zoom canvas styling with border and positioning
+### Component-Specific Styling
+- [ ] **Style FileUpload component with drag-and-drop feedback**
+  ```css
+  .upload-zone {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    background-color: #fafafa;
+    margin-bottom: 2rem;
+  }
+  
+  .upload-zone.drag-over {
+    border-color: #007bff;
+    background-color: #e3f2fd;
+    transform: scale(1.02);
+  }
+  
+  .upload-zone button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+  }
+  
+  .upload-zone button:hover {
+    background-color: #0056b3;
+  }
+  
+  .upload-content p {
+    margin: 0.5rem 0;
+    color: #666;
+  }
+  ```
 
-## Application State Management
+- [ ] **Style ControlPanel with responsive grid layout**
+  ```css
+  .control-panel {
+    background-color: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    height: fit-content;
+  }
+  
+  .name-section {
+    margin-bottom: 1.5rem;
+  }
+  
+  .name-section label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #333;
+  }
+  
+  .name-section input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+  
+  .name-section input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+  }
+  ```
 
-### Core State Setup
-- [ ] Initialize `appState` object with all required properties
-- [ ] Create `image` state object (file, canvas, originalData, processedData, width, height)
-- [ ] Create `lines` state object (headerEnd, footerStart, textLine, baseline, topLine, leftStart, rightStart, letterLines)
-- [ ] Create `ui` state object (activeMode, name, zoomVisible, zoomPosition)
-- [ ] Create `settings` state object (backgroundRemoved, targetColor)
-- [ ] Implement state update functions with proper validation
+- [ ] **Style line control components with active states**
+  ```css
+  .line-controls h3 {
+    margin: 1.5rem 0 1rem 0;
+    color: #333;
+    font-size: 1.1rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.5rem;
+  }
+  
+  .line-controls-grid {
+    display: grid;
+    gap: 0.75rem;
+  }
+  
+  .line-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .line-btn {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 1px solid #ddd;
+    background-color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+  }
+  
+  .line-btn:hover {
+    background-color: #f8f9fa;
+    border-color: #007bff;
+  }
+  
+  .line-btn.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+  }
+  
+  .line-input {
+    width: 80px;
+    padding: 0.75rem 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 0.9rem;
+  }
+  
+  .line-input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+  }
+  ```
+
+- [ ] **Style background removal component**
+  ```css
+  .background-section {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+  }
+  
+  .action-btn {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s ease;
+  }
+  
+  .action-btn:hover:not(:disabled) {
+    background-color: #218838;
+  }
+  
+  .action-btn:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+  }
+  
+  .status {
+    display: inline-block;
+    margin-top: 0.5rem;
+    color: #28a745;
+    font-weight: 500;
+  }
+  ```
+
+- [ ] **Style letter lines with dynamic management**
+  ```css
+  .letter-lines-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+  }
+  
+  .toggle-btn {
+    padding: 0.75rem 1rem;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  
+  .toggle-btn.active {
+    background-color: #dc3545;
+  }
+  
+  .toggle-status {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: #666;
+    font-style: italic;
+  }
+  
+  .letter-lines-list {
+    margin-top: 1rem;
+  }
+  
+  .letter-lines-list h4 {
+    margin-bottom: 0.75rem;
+    color: #333;
+    font-size: 1rem;
+  }
+  
+  .letter-line-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .letter-line-input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: center;
+  }
+  
+  .remove-btn {
+    width: 32px;
+    height: 32px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+  
+  .remove-btn:hover {
+    background-color: #c82333;
+  }
+  ```
+
+- [ ] **Style export button with status feedback**
+  ```css
+  .export-section {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid #eee;
+  }
+  
+  .primary-btn {
+    width: 100%;
+    padding: 1rem;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+  
+  .primary-btn:hover:not(:disabled) {
+    background-color: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,123,255,0.3);
+  }
+  
+  .primary-btn:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+  
+  .export-status {
+    margin-top: 0.75rem;
+    padding: 0.5rem;
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    color: #856404;
+    font-size: 0.9rem;
+    text-align: center;
+  }
+  ```
+
+### Canvas and Display Styling
+- [ ] **Style canvas container with proper positioning**
+  ```css
+  .canvas-container {
+    position: relative;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+  }
+  
+  #main-canvas, #overlay-canvas {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: 1px solid #ddd;
+    cursor: crosshair;
+  }
+  
+  #overlay-canvas {
+    pointer-events: none;
+    z-index: 10;
+  }
+  
+  .canvas-container.active-mode #main-canvas {
+    cursor: crosshair;
+  }
+  
+  .canvas-container.background-mode #main-canvas {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="%23007bff" stroke-width="2"/><circle cx="12" cy="12" r="2" fill="%23007bff"/></svg>') 12 12, crosshair;
+  }
+  ```
+
+- [ ] **Style zoom view with proper positioning and visibility**
+  ```css
+  .zoom-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    background-color: white;
+    border: 2px solid #007bff;
+    border-radius: 8px;
+    padding: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: opacity 0.2s ease;
+  }
+  
+  .zoom-container.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  
+  .zoom-container.visible {
+    opacity: 1;
+  }
+  
+  .zoom-canvas {
+    display: block;
+    border: 1px solid #ddd;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+  
+  .zoom-label {
+    text-align: center;
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: #666;
+    font-weight: 500;
+  }
+  ```
+
+### Line Overlay Styling
+- [ ] **Define CSS classes for different line types on canvas**
+  ```css
+  /* These will be applied programmatically to canvas overlays */
+  .line-overlay {
+    position: absolute;
+    pointer-events: none;
+    z-index: 5;
+  }
+  
+  .line-horizontal {
+    height: 2px;
+    width: 100%;
+    background-color: rgba(0, 123, 255, 0.8);
+  }
+  
+  .line-vertical {
+    width: 2px;
+    height: 100%;
+    background-color: rgba(0, 123, 255, 0.8);
+  }
+  
+  .line-header-end {
+    background-color: rgba(255, 0, 0, 0.8);
+  }
+  
+  .line-footer-start {
+    background-color: rgba(255, 165, 0, 0.8);
+  }
+  
+  .line-text-line {
+    background-color: rgba(0, 255, 0, 0.8);
+  }
+  
+  .line-baseline {
+    background-color: rgba(128, 0, 128, 0.8);
+  }
+  
+  .line-top-line {
+    background-color: rgba(255, 192, 203, 0.8);
+  }
+  
+  .line-left-start, .line-right-start {
+    background-color: rgba(0, 255, 255, 0.8);
+  }
+  
+  .line-letter {
+    background-color: rgba(255, 255, 0, 0.8);
+  }
+  ```
+
+## React State Management and Custom Hooks
+
+### Main Application State
+- [ ] **Implement main App component state with useState**
+  ```jsx
+  import React, { useState, useCallback, useRef } from 'react';
+  
+  function App() {
+    const [appState, setAppState] = useState({
+      image: {
+        file: null,
+        canvas: null,
+        originalData: null,
+        processedData: null, // Background-removed image data
+        width: 0,
+        height: 0
+      },
+      lines: {
+        headerEnd: null,
+        footerStart: null,
+        textLine: null,
+        baseline: null,
+        topLine: null,
+        leftStart: null,
+        rightStart: null,
+        letterLines: []
+      },
+      ui: {
+        activeMode: null, // 'background', 'headerEnd', 'footerStart', etc.
+        name: '',
+        zoomVisible: false,
+        zoomPosition: { x: 0, y: 0 }
+      },
+      settings: {
+        backgroundRemoved: false,
+        targetColor: null
+      }
+    });
+    
+    // State update function with validation
+    const updateAppState = useCallback((updates) => {
+      setAppState(prevState => ({
+        ...prevState,
+        ...updates,
+        // Ensure nested objects are properly merged
+        image: updates.image ? { ...prevState.image, ...updates.image } : prevState.image,
+        lines: updates.lines ? { ...prevState.lines, ...updates.lines } : prevState.lines,
+        ui: updates.ui ? { ...prevState.ui, ...updates.ui } : prevState.ui,
+        settings: updates.settings ? { ...prevState.settings, ...updates.settings } : prevState.settings
+      }));
+    }, []);
+    
+    return (
+      // App JSX with state passed to components
+    );
+  }
+  ```
+  - Uses React useState for reactive state management
+  - Immutable state updates with proper object spreading
+  - Validation and type safety for state updates
+
+### Custom Hook for Image Processing
+- [ ] **Create useImageProcessor custom hook**
+  ```jsx
+  // src/hooks/useImageProcessor.js
+  import { useCallback, useRef } from 'react';
+  import { removeBackground } from '../utils/imageProcessor';
+  
+  export const useImageProcessor = (appState, updateAppState) => {
+    const canvasRef = useRef(null);
+    
+    const loadImage = useCallback((file) => {
+      if (!file || file.type !== 'image/png') {
+        throw new Error('Please select a PNG file');
+      }
+      
+      const img = new Image();
+      const canvas = canvasRef.current;
+      
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        
+        const imageData = ctx.getImageData(0, 0, img.width, img.height);
+        
+        updateAppState({
+          image: {
+            file,
+            canvas,
+            originalData: imageData,
+            width: img.width,
+            height: img.height
+          }
+        });
+      };
+      
+      img.onerror = () => {
+        throw new Error('Failed to load image');
+      };
+      
+      img.src = URL.createObjectURL(file);
+    }, [updateAppState]);
+    
+    const processBackgroundRemoval = useCallback((clickX, clickY) => {
+      if (!appState.image.originalData) return;
+      
+      const ctx = appState.image.canvas.getContext('2d');
+      const imageData = ctx.getImageData(clickX, clickY, 1, 1);
+      const targetColor = {
+        r: imageData.data[0],
+        g: imageData.data[1],
+        b: imageData.data[2]
+      };
+      
+      const processedData = removeBackground(appState.image.originalData, targetColor);
+      ctx.putImageData(processedData, 0, 0);
+      
+      updateAppState({
+        image: { processedData },
+        settings: { backgroundRemoved: true, targetColor },
+        ui: { activeMode: null }
+      });
+    }, [appState.image, updateAppState]);
+    
+    const getBase64ImageData = useCallback(() => {
+      if (!appState.image.canvas) return null;
+      return appState.image.canvas.toDataURL('image/png');
+    }, [appState.image.canvas]);
+    
+    return {
+      canvasRef,
+      loadImage,
+      processBackgroundRemoval,
+      getBase64ImageData
+    };
+  };
+  ```
+  - Encapsulates image processing logic in reusable hook
+  - Handles file loading, background removal, and data export
+  - Manages canvas references and image state updates
+
+### Custom Hook for Line Management
+- [ ] **Create useLineManager custom hook**
+  ```jsx
+  // src/hooks/useLineManager.js
+  import { useCallback, useRef, useEffect } from 'react';
+  
+  export const useLineManager = (appState, updateAppState) => {
+    const overlayCanvasRef = useRef(null);
+    
+    const drawPreviewLine = useCallback((x, y, lineType) => {
+      const canvas = overlayCanvasRef.current;
+      if (!canvas) return;
+      
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      ctx.strokeStyle = getLineColor(lineType);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      
+      if (isHorizontalLine(lineType)) {
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+      } else {
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+      }
+      
+      ctx.stroke();
+    }, []);
+    
+    const placeLine = useCallback((x, y, lineType) => {
+      const coordinate = isHorizontalLine(lineType) ? y : x;
+      
+      updateAppState({
+        lines: { [lineType]: coordinate },
+        ui: { activeMode: null }
+      });
+      
+      // Clear preview
+      const canvas = overlayCanvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }, [updateAppState]);
+    
+    const addLetterLine = useCallback((x) => {
+      const newLetterLines = [...appState.lines.letterLines, x].sort((a, b) => a - b);
+      updateAppState({
+        lines: { letterLines: newLetterLines }
+      });
+    }, [appState.lines.letterLines, updateAppState]);
+    
+    const renderAllLines = useCallback(() => {
+      const canvas = overlayCanvasRef.current;
+      if (!canvas) return;
+      
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw all placed lines
+      Object.entries(appState.lines).forEach(([lineType, value]) => {
+        if (value === null || lineType === 'letterLines') return;
+        
+        ctx.strokeStyle = getLineColor(lineType);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        
+        if (isHorizontalLine(lineType)) {
+          ctx.moveTo(0, value);
+          ctx.lineTo(canvas.width, value);
+        } else {
+          ctx.moveTo(value, 0);
+          ctx.lineTo(value, canvas.height);
+        }
+        
+        ctx.stroke();
+      });
+      
+      // Draw letter lines
+      appState.lines.letterLines.forEach(x => {
+        ctx.strokeStyle = getLineColor('letter');
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      });
+    }, [appState.lines]);
+    
+    // Helper functions
+    const isHorizontalLine = (lineType) => {
+      return ['headerEnd', 'footerStart', 'textLine', 'baseline', 'topLine'].includes(lineType);
+    };
+    
+    const getLineColor = (lineType) => {
+      const colors = {
+        headerEnd: 'rgba(255, 0, 0, 0.8)',
+        footerStart: 'rgba(255, 165, 0, 0.8)',
+        textLine: 'rgba(0, 255, 0, 0.8)',
+        baseline: 'rgba(128, 0, 128, 0.8)',
+        topLine: 'rgba(255, 192, 203, 0.8)',
+        leftStart: 'rgba(0, 255, 255, 0.8)',
+        rightStart: 'rgba(0, 255, 255, 0.8)',
+        letter: 'rgba(255, 255, 0, 0.8)'
+      };
+      return colors[lineType] || 'rgba(0, 123, 255, 0.8)';
+    };
+    
+    // Re-render lines when state changes
+    useEffect(() => {
+      renderAllLines();
+    }, [renderAllLines]);
+    
+    return {
+      overlayCanvasRef,
+      drawPreviewLine,
+      placeLine,
+      addLetterLine,
+      renderAllLines
+    };
+  };
+  ```
+  - Manages all line drawing and overlay functionality
+  - Handles preview lines, placement, and rendering
+  - Supports both horizontal and vertical lines with different colors
+
+### Custom Hook for Zoom Management
+- [ ] **Create useZoomManager custom hook**
+  ```jsx
+  // src/hooks/useZoomManager.js
+  import { useCallback, useRef, useEffect } from 'react';
+  
+  export const useZoomManager = (appState, updateAppState) => {
+    const zoomCanvasRef = useRef(null);
+    const zoomFactor = 5;
+    const zoomSize = 100;
+    
+    const showZoom = useCallback((x, y) => {
+      updateAppState({
+        ui: {
+          zoomVisible: true,
+          zoomPosition: { x, y }
+        }
+      });
+    }, [updateAppState]);
+    
+    const hideZoom = useCallback(() => {
+      updateAppState({
+        ui: { zoomVisible: false }
+      });
+    }, [updateAppState]);
+    
+    const updateZoomPosition = useCallback((x, y) => {
+      if (!appState.ui.zoomVisible) return;
+      
+      const zoomCanvas = zoomCanvasRef.current;
+      const mainCanvas = appState.image.canvas;
+      
+      if (!zoomCanvas || !mainCanvas) return;
+      
+      const ctx = zoomCanvas.getContext('2d');
+      ctx.clearRect(0, 0, zoomCanvas.width, zoomCanvas.height);
+      
+      // Calculate source area (centered on cursor)
+      const sourceSize = zoomSize / zoomFactor;
+      const sourceX = x - sourceSize / 2;
+      const sourceY = y - sourceSize / 2;
+      
+      // Draw zoomed portion
+      ctx.imageSmoothingEnabled = false; // Pixelated zoom
+      ctx.drawImage(
+        mainCanvas,
+        sourceX, sourceY, sourceSize, sourceSize,
+        0, 0, zoomCanvas.width, zoomCanvas.height
+      );
+      
+      // Draw crosshair
+      ctx.strokeStyle = '#ff0000';
+      ctx.lineWidth = 1;
+      const centerX = zoomCanvas.width / 2;
+      const centerY = zoomCanvas.height / 2;
+      
+      ctx.beginPath();
+      ctx.moveTo(centerX - 10, centerY);
+      ctx.lineTo(centerX + 10, centerY);
+      ctx.moveTo(centerX, centerY - 10);
+      ctx.lineTo(centerX, centerY + 10);
+      ctx.stroke();
+      
+      updateAppState({
+        ui: { zoomPosition: { x, y } }
+      });
+    }, [appState.ui.zoomVisible, appState.image.canvas, updateAppState]);
+    
+    const getZoomedPixelColor = useCallback((x, y) => {
+      const canvas = appState.image.canvas;
+      if (!canvas) return null;
+      
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.getImageData(x, y, 1, 1);
+      return {
+        r: imageData.data[0],
+        g: imageData.data[1],
+        b: imageData.data[2],
+        a: imageData.data[3]
+      };
+    }, [appState.image.canvas]);
+    
+    return {
+      zoomCanvasRef,
+      showZoom,
+      hideZoom,
+      updateZoomPosition,
+      getZoomedPixelColor
+    };
+  };
+  ```
+  - Manages zoom functionality with 5x magnification
+  - Handles zoom visibility and position updates
+  - Provides precise pixel color selection
+
+### State Validation and Helpers
+- [ ] **Create state validation utilities**
+  ```jsx
+  // src/utils/stateValidation.js
+  
+  export const validateCoordinate = (value, max) => {
+    const num = parseInt(value);
+    if (isNaN(num) || num < 0 || num > max) {
+      return null;
+    }
+    return num;
+  };
+  
+  export const validateAppState = (state) => {
+    const errors = [];
+    
+    if (!state.image.file) {
+      errors.push('No image file loaded');
+    }
+    
+    if (!state.ui.name.trim()) {
+      errors.push('Name is required');
+    }
+    
+    if (!state.lines.headerEnd) {
+      errors.push('Header end line is required');
+    }
+    
+    if (!state.lines.footerStart) {
+      errors.push('Footer start line is required');
+    }
+    
+    if (!state.lines.textLine) {
+      errors.push('Text line is required');
+    }
+    
+    return errors;
+  };
+  
+  export const calculateDefaults = (state) => {
+    const defaults = {};
+    
+    // Default baseline to 1 pixel below footer start
+    if (!state.lines.baseline && state.lines.footerStart) {
+      defaults.baseline = state.lines.footerStart + 1;
+    }
+    
+    // Default top line to 1 pixel above header end
+    if (!state.lines.topLine && state.lines.headerEnd) {
+      defaults.topLine = state.lines.headerEnd - 1;
+    }
+    
+    return defaults;
+  };
+  ```
+  - Validates coordinates and required fields
+  - Calculates default values for optional fields
+  - Provides error checking for export readiness
 
 ## File Upload Implementation
 
-### Drag and Drop Functionality
-- [ ] Implement drag-over event handler with visual feedback
-- [ ] Implement drag-leave event handler to remove visual feedback
-- [ ] Implement drop event handler to process PNG files
-- [ ] Add file type validation (PNG only)
-- [ ] Add file size validation and error handling
-- [ ] Implement traditional file input as fallback
-- [ ] Display uploaded file name in UI
-
-### Image Loading
-- [ ] Create `loadImage(file)` function in imageProcessor.js
-- [ ] Load image into HTML Image element
-- [ ] Calculate and set canvas dimensions based on image size
-- [ ] Draw image onto main canvas
-- [ ] Store original image data in appState
-- [ ] Update UI to show image dimensions
-- [ ] Handle image loading errors gracefully
-
-## Background Removal Implementation
-
-### Color Selection
-- [ ] Implement "Remove Background" button click handler
-- [ ] Add click event listener to canvas for pixel selection
-- [ ] Create `getPixelColor(x, y)` function to get color at coordinates
-- [ ] Display selected color information in UI
-- [ ] Show zoom view when in background removal mode
-
-### Color-to-Alpha Algorithm
-- [ ] Implement `removeBackground(imageData, targetColor)` function
-- [ ] Calculate alpha ratio for each pixel based on target color
-- [ ] Apply color-to-alpha conversion using the specified algorithm
-- [ ] Handle edge cases (division by zero, color channel bounds)
-- [ ] Store processed image data separately from original
+### Drag and Drop Styling
+- [ ] **Add CSS for drag-and-drop interactions**
+  ```css
+  .file-upload-container {
+    margin-bottom: 20px;
+  }
+  
+  .file-upload-area {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 40px 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    background-color: #fafafa;
+  }
+  
+  .file-upload-area:hover {
+    border-color: #007bff;
+    background-color: #f0f8ff;
+  }
+  
+  .file-upload-area.drag-active {
+    border-color: #28a745;
+    background-color: #f0fff0;
+    transform: scale(1.02);
+  }
+  
+  .file-input {
+    display: none;
+  }
+  
+  .file-upload-label {
+    display: block;
+    cursor: pointer;
+  }
+  
+  .upload-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+  }
+  
+  .upload-text {
+    font-size: 16px;
+    margin-bottom: 5px;
+  }
+  
+  .upload-hint {
+    font-size: 14px;
+    color: #666;
+  }
+  
+  .file-upload-success {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .upload-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    padding: 10px;
+    margin-top: 10px;
+    color: #721c24;
+  }
+  
+  .loading-progress {
+    width: 100%;
+    height: 4px;
+    background-color: #e9ecef;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 10px;
+  }
+  
+  .loading-progress-bar {
+    height: 100%;
+    background-color: #007bff;
+    transition: width 0.3s ease;
+  }
+  
+  .canvas-container.background-mode canvas:hover {
+    filter: brightness(1.1);
+  }
+  ```
+  - Styling for background removal controls and feedback
+  - Visual indicators for active background removal mode
+  - Color preview and information display
 - [ ] Update canvas display with background-removed image
 - [ ] Add undo functionality to restore original image
 
-## Zoom Functionality Implementation
+## React Zoom Functionality Implementation
 
-### Zoom Manager Class
-- [ ] Create `ZoomManager` class constructor with canvas references
-- [ ] Implement `showZoom(x, y)` method to display zoom view
-- [ ] Implement `hideZoom()` method to hide zoom view
-- [ ] Implement `updateZoomPosition(x, y)` method for cursor tracking
-- [ ] Set zoom factor to 5x magnification
-- [ ] Create 100x100 pixel zoom display area
+### ZoomView React Component
+- [ ] **Create ZoomView component for precise pixel selection**
+  ```jsx
+  // src/components/ZoomView.jsx
+  import React, { useRef, useEffect, useCallback } from 'react';
+  import { useZoomManager } from '../hooks/useZoomManager';
+  
+  export const ZoomView = ({ appState, updateAppState }) => {
+    const { zoomCanvasRef, updateZoomPosition } = useZoomManager(appState, updateAppState);
+    
+    // Update zoom content when position changes
+    useEffect(() => {
+      if (appState.ui.zoomVisible && appState.ui.zoomPosition) {
+        updateZoomPosition(appState.ui.zoomPosition.x, appState.ui.zoomPosition.y);
+      }
+    }, [appState.ui.zoomVisible, appState.ui.zoomPosition, updateZoomPosition]);
+    
+    if (!appState.ui.zoomVisible) {
+      return null;
+    }
+    
+    return (
+      <div className="zoom-view-container">
+        <div className="zoom-view-header">
+          <span>Zoom View (5x)</span>
+          <span className="zoom-coordinates">
+            X: {appState.ui.zoomPosition.x}, Y: {appState.ui.zoomPosition.y}
+          </span>
+        </div>
+        <canvas
+          ref={zoomCanvasRef}
+          width={100}
+          height={100}
+          className="zoom-canvas"
+        />
+        <div className="zoom-instructions">
+          Move mouse for precise selection
+        </div>
+      </div>
+    );
+  };
+  ```
+  - Displays 5x magnified view of cursor area
+  - Shows current coordinates for precision
+  - Integrates with useZoomManager hook
 
-### Zoom Visual Features
-- [ ] Implement pixelated zoom (disable image smoothing)
-- [ ] Draw crosshair in center of zoom view
-- [ ] Update zoom view in real-time as mouse moves
-- [ ] Position zoom canvas relative to cursor or in fixed position
-- [ ] Add zoom view for all line selection modes
-- [ ] Implement `getZoomedPixelColor(x, y)` for precise color selection
+### Enhanced useZoomManager Hook
+- [ ] **Complete useZoomManager implementation with React patterns**
+  ```jsx
+  // src/hooks/useZoomManager.js (enhanced version)
+  import { useCallback, useRef, useEffect, useState } from 'react';
+  
+  export const useZoomManager = (appState, updateAppState) => {
+    const zoomCanvasRef = useRef(null);
+    const [zoomData, setZoomData] = useState(null);
+    const zoomFactor = 5;
+    const zoomSize = 100;
+    
+    const showZoom = useCallback((x, y) => {
+      updateAppState({
+        ui: {
+          zoomVisible: true,
+          zoomPosition: { x, y }
+        }
+      });
+    }, [updateAppState]);
+    
+    const hideZoom = useCallback(() => {
+      updateAppState({
+        ui: { zoomVisible: false }
+      });
+      setZoomData(null);
+    }, [updateAppState]);
+    
+    const updateZoomPosition = useCallback((x, y) => {
+      const zoomCanvas = zoomCanvasRef.current;
+      const mainCanvas = appState.image.canvas;
+      
+      if (!zoomCanvas || !mainCanvas || !appState.ui.zoomVisible) return;
+      
+      const ctx = zoomCanvas.getContext('2d');
+      ctx.clearRect(0, 0, zoomCanvas.width, zoomCanvas.height);
+      
+      // Calculate source area (centered on cursor)
+      const sourceSize = zoomSize / zoomFactor;
+      const sourceX = Math.max(0, Math.min(mainCanvas.width - sourceSize, x - sourceSize / 2));
+      const sourceY = Math.max(0, Math.min(mainCanvas.height - sourceSize, y - sourceSize / 2));
+      
+      // Draw zoomed portion with pixelated effect
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(
+        mainCanvas,
+        sourceX, sourceY, sourceSize, sourceSize,
+        0, 0, zoomCanvas.width, zoomCanvas.height
+      );
+      
+      // Draw grid for pixel precision
+      drawPixelGrid(ctx, zoomCanvas.width, zoomCanvas.height, zoomFactor);
+      
+      // Draw crosshair at center
+      drawCrosshair(ctx, zoomCanvas.width / 2, zoomCanvas.height / 2);
+      
+      // Update zoom data for other components
+      setZoomData({
+        sourceX,
+        sourceY,
+        sourceSize,
+        centerX: x,
+        centerY: y
+      });
+      
+      updateAppState({
+        ui: { zoomPosition: { x, y } }
+      });
+    }, [appState.ui.zoomVisible, appState.image.canvas, updateAppState]);
+    
+    const getZoomedPixelColor = useCallback((x, y) => {
+      const canvas = appState.image.canvas;
+      if (!canvas) return null;
+      
+      // Ensure coordinates are within bounds
+      const clampedX = Math.max(0, Math.min(canvas.width - 1, Math.floor(x)));
+      const clampedY = Math.max(0, Math.min(canvas.height - 1, Math.floor(y)));
+      
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.getImageData(clampedX, clampedY, 1, 1);
+      
+      return {
+        r: imageData.data[0],
+        g: imageData.data[1],
+        b: imageData.data[2],
+        a: imageData.data[3]
+      };
+    }, [appState.image.canvas]);
+    
+    const getRelativeZoomCoordinates = useCallback((zoomX, zoomY) => {
+      if (!zoomData) return null;
+      
+      // Convert zoom canvas coordinates to main canvas coordinates
+      const relativeX = (zoomX / zoomSize) * zoomData.sourceSize;
+      const relativeY = (zoomY / zoomSize) * zoomData.sourceSize;
+      
+      const mainX = zoomData.sourceX + relativeX;
+      const mainY = zoomData.sourceY + relativeY;
+      
+      return { x: Math.floor(mainX), y: Math.floor(mainY) };
+    }, [zoomData]);
+    
+    // Helper function to draw pixel grid
+    const drawPixelGrid = (ctx, width, height, factor) => {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.lineWidth = 0.5;
+      
+      const gridSize = factor;
+      
+      // Vertical lines
+      for (let x = 0; x <= width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      
+      // Horizontal lines
+      for (let y = 0; y <= height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+    };
+    
+    // Helper function to draw crosshair
+    const drawCrosshair = (ctx, centerX, centerY) => {
+      ctx.strokeStyle = '#ff0000';
+      ctx.lineWidth = 1;
+      
+      ctx.beginPath();
+      ctx.moveTo(centerX - 10, centerY);
+      ctx.lineTo(centerX + 10, centerY);
+      ctx.moveTo(centerX, centerY - 10);
+      ctx.lineTo(centerX, centerY + 10);
+      ctx.stroke();
+      
+      // Draw center dot
+      ctx.fillStyle = '#ff0000';
+      ctx.fillRect(centerX - 1, centerY - 1, 2, 2);
+    };
+    
+    return {
+      zoomCanvasRef,
+      showZoom,
+      hideZoom,
+      updateZoomPosition,
+      getZoomedPixelColor,
+      getRelativeZoomCoordinates,
+      zoomData
+    };
+  };
+  ```
+  - Enhanced zoom with pixel grid for precision
+  - Coordinate conversion utilities
+  - Proper bounds checking and error handling
 
-## Line Selection Implementation
+### Zoom Integration with Line Selection
+- [ ] **Create useMouseInteraction hook for unified mouse handling**
+  ```jsx
+  // src/hooks/useMouseInteraction.js
+  import { useCallback, useEffect } from 'react';
+  import { useZoomManager } from './useZoomManager';
+  import { useLineManager } from './useLineManager';
+  
+  export const useMouseInteraction = (appState, updateAppState) => {
+    const { showZoom, hideZoom, updateZoomPosition } = useZoomManager(appState, updateAppState);
+    const { drawPreviewLine, placeLine, addLetterLine } = useLineManager(appState, updateAppState);
+    
+    const handleCanvasMouseMove = useCallback((e) => {
+      const canvas = appState.image.canvas;
+      if (!canvas) return;
+      
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.floor(e.clientX - rect.left);
+      const y = Math.floor(e.clientY - rect.top);
+      
+      // Always show zoom when in active modes
+      const activeMode = appState.ui.activeMode;
+      if (activeMode && ['background', 'headerEnd', 'footerStart', 'textLine', 'baseline', 'topLine', 'leftStart', 'rightStart', 'letterLines'].includes(activeMode)) {
+        showZoom(x, y);
+        updateZoomPosition(x, y);
+        
+        // Show preview line for line selection modes
+        if (activeMode !== 'background' && activeMode !== 'letterLines') {
+          drawPreviewLine(x, y, activeMode);
+        }
+      }
+    }, [appState.image.canvas, appState.ui.activeMode, showZoom, updateZoomPosition, drawPreviewLine]);
+    
+    const handleCanvasMouseLeave = useCallback(() => {
+      hideZoom();
+    }, [hideZoom]);
+    
+    const handleCanvasClick = useCallback((e) => {
+      const canvas = appState.image.canvas;
+      if (!canvas) return;
+      
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.floor(e.clientX - rect.left);
+      const y = Math.floor(e.clientY - rect.top);
+      
+      const activeMode = appState.ui.activeMode;
+      
+      if (activeMode === 'letterLines') {
+        addLetterLine(x);
+      } else if (activeMode && activeMode !== 'background') {
+        placeLine(x, y, activeMode);
+      }
+      // Background mode is handled in BackgroundRemovalControls component
+    }, [appState.image.canvas, appState.ui.activeMode, placeLine, addLetterLine]);
+    
+    // Attach event listeners to canvas
+    useEffect(() => {
+      const canvas = appState.image.canvas;
+      if (!canvas) return;
+      
+      canvas.addEventListener('mousemove', handleCanvasMouseMove);
+      canvas.addEventListener('mouseleave', handleCanvasMouseLeave);
+      canvas.addEventListener('click', handleCanvasClick);
+      
+      // Set cursor based on active mode
+      const activeMode = appState.ui.activeMode;
+      if (activeMode) {
+        canvas.style.cursor = 'crosshair';
+      } else {
+        canvas.style.cursor = 'default';
+      }
+      
+      return () => {
+        canvas.removeEventListener('mousemove', handleCanvasMouseMove);
+        canvas.removeEventListener('mouseleave', handleCanvasMouseLeave);
+        canvas.removeEventListener('click', handleCanvasClick);
+        canvas.style.cursor = 'default';
+      };
+    }, [appState.image.canvas, appState.ui.activeMode, handleCanvasMouseMove, handleCanvasMouseLeave, handleCanvasClick]);
+    
+    return {
+      // Expose methods for external use if needed
+    };
+  };
+  ```
+  - Unified mouse interaction handling for all modes
+  - Integrates zoom with line selection
+  - Proper event listener management
 
-### Line Manager Class
-- [ ] Create `LineManager` class with canvas and state references
-- [ ] Implement `enableLineSelection(type)` method
-- [ ] Implement `drawOverlayLine(x, y, type)` for preview lines
-- [ ] Implement `placeLine(x, y, type)` to store coordinates
-- [ ] Implement `updateLinePosition(type, value)` for manual input updates
-- [ ] Implement `renderAllLines()` to redraw all placed lines
+### Zoom View Styling
+- [ ] **Add CSS for zoom view component**
+  ```css
+  .zoom-view-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    border: 2px solid #333;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    font-family: monospace;
+  }
+  
+  .zoom-view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: bold;
+  }
+  
+  .zoom-coordinates {
+    color: #666;
+    font-size: 11px;
+  }
+  
+  .zoom-canvas {
+    display: block;
+    border: 1px solid #ddd;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+  
+  .zoom-instructions {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #666;
+    text-align: center;
+  }
+  
+  /* Responsive zoom positioning */
+  @media (max-width: 768px) {
+    .zoom-view-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      top: auto;
+    }
+  }
+  ```
+  - Fixed positioning for zoom view
+  - Pixelated rendering for precise pixel visibility
+  - Responsive positioning for mobile devices
 
-### Horizontal Line Selection
-- [ ] Implement header end line selection with horizontal line preview
-- [ ] Implement footer start line selection with horizontal line preview
-- [ ] Implement text line selection with horizontal line preview
-- [ ] Implement baseline selection (optional, defaults to footerStart + 1)
-- [ ] Implement top line selection (optional, defaults to headerEnd - 1)
-- [ ] Store Y-coordinates for all horizontal lines
-- [ ] Update corresponding number inputs when lines are placed
+## React Line Selection Implementation
 
-### Vertical Line Selection
-- [ ] Implement left start line selection with vertical line preview
-- [ ] Implement right start line selection with vertical line preview
-- [ ] Store X-coordinates for vertical boundary lines
-- [ ] Update corresponding number inputs when lines are placed
+### LineControls React Component
+- [ ] **Create LineControls component for line selection UI**
+  ```jsx
+  // src/components/LineControls.jsx
+  import React, { useCallback } from 'react';
+  import { useLineManager } from '../hooks/useLineManager';
+  
+  export const LineControls = ({ appState, updateAppState }) => {
+    const { renderAllLines } = useLineManager(appState, updateAppState);
+    
+    const handleLineSelection = useCallback((lineType) => {
+      updateAppState({
+        ui: { activeMode: lineType }
+      });
+    }, [updateAppState]);
+    
+    const handleCancelSelection = useCallback(() => {
+      updateAppState({
+        ui: { activeMode: null }
+      });
+    }, [updateAppState]);
+    
+    const handleManualInput = useCallback((lineType, value) => {
+      const numValue = parseInt(value);
+      if (isNaN(numValue) || numValue < 0) return;
+      
+      // Validate bounds
+      const maxValue = lineType.includes('Start') || lineType === 'letterLines' 
+        ? appState.image.width 
+        : appState.image.height;
+      
+      if (numValue > maxValue) return;
+      
+      updateAppState({
+        lines: { [lineType]: numValue }
+      });
+    }, [appState.image, updateAppState]);
+    
+    const handleLetterLineRemove = useCallback((index) => {
+      const newLetterLines = appState.lines.letterLines.filter((_, i) => i !== index);
+      updateAppState({
+        lines: { letterLines: newLetterLines }
+      });
+    }, [appState.lines.letterLines, updateAppState]);
+    
+    const handleLetterLineToggle = useCallback(() => {
+      const isActive = appState.ui.activeMode === 'letterLines';
+      updateAppState({
+        ui: { activeMode: isActive ? null : 'letterLines' }
+      });
+    }, [appState.ui.activeMode, updateAppState]);
+    
+    const lineTypes = [
+      { key: 'headerEnd', label: 'Header End', type: 'horizontal', required: true, color: '#ff0000' },
+      { key: 'footerStart', label: 'Footer Start', type: 'horizontal', required: true, color: '#ffa500' },
+      { key: 'textLine', label: 'Text Line', type: 'horizontal', required: true, color: '#00ff00' },
+      { key: 'baseline', label: 'Baseline', type: 'horizontal', required: false, color: '#800080' },
+      { key: 'topLine', label: 'Top Line', type: 'horizontal', required: false, color: '#ffc0cb' },
+      { key: 'leftStart', label: 'Left Start', type: 'vertical', required: false, color: '#00ffff' },
+      { key: 'rightStart', label: 'Right Start', type: 'vertical', required: false, color: '#00ffff' }
+    ];
+    
+    if (!appState.image.canvas) {
+      return (
+        <div className="line-controls disabled">
+          <p>Upload an image to start selecting lines</p>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="line-controls">
+        <div className="line-controls-header">
+          <h3>Line Selection</h3>
+          {appState.ui.activeMode && (
+            <button onClick={handleCancelSelection} className="btn btn-secondary btn-sm">
+              Cancel
+            </button>
+          )}
+        </div>
+        
+        <div className="line-types-grid">
+          {lineTypes.map(({ key, label, type, required, color }) => (
+            <div key={key} className="line-control-item">
+              <div className="line-control-header">
+                <span 
+                  className="line-color-indicator" 
+                  style={{ backgroundColor: color }}
+                ></span>
+                <label>{label} {required && <span className="required">*</span>}</label>
+              </div>
+              
+              <div className="line-control-actions">
+                <button
+                  onClick={() => handleLineSelection(key)}
+                  disabled={appState.ui.activeMode === key}
+                  className={`btn btn-sm ${
+                    appState.ui.activeMode === key ? 'btn-warning' : 'btn-primary'
+                  }`}
+                >
+                  {appState.ui.activeMode === key ? 'Click to place' : 'Select'}
+                </button>
+                
+                <input
+                  type="number"
+                  min="0"
+                  max={type === 'vertical' ? appState.image.width : appState.image.height}
+                  value={appState.lines[key] || ''}
+                  onChange={(e) => handleManualInput(key, e.target.value)}
+                  placeholder={type === 'vertical' ? 'X' : 'Y'}
+                  className="coordinate-input"
+                />
+              </div>
+              
+              {appState.lines[key] !== null && (
+                <div className="line-status">
+                  ✓ {type === 'vertical' ? 'X' : 'Y'}: {appState.lines[key]}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        
+        {/* Letter Lines Section */}
+        <div className="letter-lines-section">
+          <div className="letter-lines-header">
+            <h4>Letter Lines</h4>
+            <button
+              onClick={handleLetterLineToggle}
+              className={`btn btn-sm ${
+                appState.ui.activeMode === 'letterLines' ? 'btn-warning' : 'btn-secondary'
+              }`}
+            >
+              {appState.ui.activeMode === 'letterLines' ? 'Stop Adding' : 'Add Letter Lines'}
+            </button>
+          </div>
+          
+          {appState.lines.letterLines.length > 0 && (
+            <div className="letter-lines-list">
+              {appState.lines.letterLines.map((x, index) => (
+                <div key={index} className="letter-line-item">
+                  <span>Line {index + 1}: X={x}</span>
+                  <button
+                    onClick={() => handleLetterLineRemove(index)}
+                    className="btn btn-danger btn-xs"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {appState.ui.activeMode === 'letterLines' && (
+            <div className="letter-lines-instructions">
+              Click on the image to add vertical letter lines. Click "Stop Adding" when done.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+  ```
+  - Comprehensive UI for all line types with visual indicators
+  - Manual coordinate input with validation
+  - Letter lines management with add/remove functionality
+  - Real-time feedback and status display
 
-### Letter Lines Implementation
-- [ ] Implement "Add Letter Lines" toggle button functionality
-- [ ] Enable continuous vertical line placement mode
-- [ ] Store array of X-coordinates for letter lines
-- [ ] Dynamically create number inputs for each letter line
-- [ ] Allow removal of individual letter lines
-- [ ] Implement click-outside-to-stop functionality
+### Enhanced useLineManager Hook
+- [ ] **Complete useLineManager with all line selection features**
+  ```jsx
+  // src/hooks/useLineManager.js (enhanced version)
+  import { useCallback, useRef, useEffect } from 'react';
+  
+  export const useLineManager = (appState, updateAppState) => {
+    const overlayCanvasRef = useRef(null);
+    
+    const drawPreviewLine = useCallback((x, y, lineType) => {
+      const canvas = overlayCanvasRef.current;
+      if (!canvas) return;
+      
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw preview line
+      ctx.strokeStyle = getLineColor(lineType);
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]); // Dashed line for preview
+      ctx.beginPath();
+      
+      if (isHorizontalLine(lineType)) {
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+      } else {
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+      }
+      
+      ctx.stroke();
+      ctx.setLineDash([]); // Reset line dash
+      
+      // Draw existing lines
+      renderExistingLines(ctx);
+    }, [appState.lines]);
+    
+    const placeLine = useCallback((x, y, lineType) => {
+      const coordinate = isHorizontalLine(lineType) ? y : x;
+      
+      // Validate coordinate bounds
+      const maxValue = isHorizontalLine(lineType) 
+        ? appState.image.height 
+        : appState.image.width;
+      
+      if (coordinate < 0 || coordinate > maxValue) {
+        console.warn(`Coordinate ${coordinate} is out of bounds for ${lineType}`);
+        return;
+      }
+      
+      updateAppState({
+        lines: { [lineType]: coordinate },
+        ui: { activeMode: null }
+      });
+      
+      // Clear preview and render all lines
+      const canvas = overlayCanvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        renderExistingLines(ctx);
+      }
+    }, [appState.image, updateAppState]);
+    
+    const addLetterLine = useCallback((x) => {
+      // Validate coordinate bounds
+      if (x < 0 || x > appState.image.width) {
+        console.warn(`Letter line coordinate ${x} is out of bounds`);
+        return;
+      }
+      
+      // Check if line already exists at this position (within 2 pixels)
+      const exists = appState.lines.letterLines.some(existingX => Math.abs(existingX - x) < 2);
+      if (exists) {
+        console.warn(`Letter line already exists near position ${x}`);
+        return;
+      }
+      
+      const newLetterLines = [...appState.lines.letterLines, x].sort((a, b) => a - b);
+      updateAppState({
+        lines: { letterLines: newLetterLines }
+      });
+    }, [appState.lines.letterLines, appState.image.width, updateAppState]);
+    
+    const updateLinePosition = useCallback((lineType, value) => {
+      const numValue = parseInt(value);
+      if (isNaN(numValue)) {
+        updateAppState({
+          lines: { [lineType]: null }
+        });
+        return;
+      }
+      
+      // Validate bounds
+      const maxValue = isHorizontalLine(lineType) 
+        ? appState.image.height 
+        : appState.image.width;
+      
+      if (numValue < 0 || numValue > maxValue) {
+        console.warn(`Value ${numValue} is out of bounds for ${lineType}`);
+        return;
+      }
+      
+      updateAppState({
+        lines: { [lineType]: numValue }
+      });
+    }, [appState.image, updateAppState]);
+    
+    const renderAllLines = useCallback(() => {
+      const canvas = overlayCanvasRef.current;
+      if (!canvas) return;
+      
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      renderExistingLines(ctx);
+    }, [appState.lines]);
+    
+    const renderExistingLines = useCallback((ctx) => {
+      ctx.setLineDash([]); // Solid lines for placed lines
+      
+      // Draw all placed lines
+      Object.entries(appState.lines).forEach(([lineType, value]) => {
+        if (value === null || lineType === 'letterLines') return;
+        
+        ctx.strokeStyle = getLineColor(lineType);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        
+        if (isHorizontalLine(lineType)) {
+          ctx.moveTo(0, value);
+          ctx.lineTo(ctx.canvas.width, value);
+        } else {
+          ctx.moveTo(value, 0);
+          ctx.lineTo(value, ctx.canvas.height);
+        }
+        
+        ctx.stroke();
+        
+        // Draw line label
+        drawLineLabel(ctx, lineType, value);
+      });
+      
+      // Draw letter lines
+      appState.lines.letterLines.forEach((x, index) => {
+        ctx.strokeStyle = getLineColor('letter');
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, ctx.canvas.height);
+        ctx.stroke();
+        
+        // Draw letter line label
+        drawLetterLineLabel(ctx, x, index);
+      });
+    }, [appState.lines]);
+    
+    const drawLineLabel = useCallback((ctx, lineType, value) => {
+      ctx.fillStyle = getLineColor(lineType);
+      ctx.font = '12px Arial';
+      ctx.fontWeight = 'bold';
+      
+      const label = getLineLabel(lineType);
+      const isHorizontal = isHorizontalLine(lineType);
+      
+      if (isHorizontal) {
+        ctx.fillText(label, 5, value - 5);
+      } else {
+        ctx.save();
+        ctx.translate(value + 5, 15);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText(label, 0, 0);
+        ctx.restore();
+      }
+    }, []);
+    
+    const drawLetterLineLabel = useCallback((ctx, x, index) => {
+      ctx.fillStyle = getLineColor('letter');
+      ctx.font = '10px Arial';
+      ctx.fillText(`L${index + 1}`, x + 2, 12);
+    }, []);
+    
+    // Helper functions
+    const isHorizontalLine = (lineType) => {
+      return ['headerEnd', 'footerStart', 'textLine', 'baseline', 'topLine'].includes(lineType);
+    };
+    
+    const getLineColor = (lineType) => {
+      const colors = {
+        headerEnd: 'rgba(255, 0, 0, 0.8)',
+        footerStart: 'rgba(255, 165, 0, 0.8)',
+        textLine: 'rgba(0, 255, 0, 0.8)',
+        baseline: 'rgba(128, 0, 128, 0.8)',
+        topLine: 'rgba(255, 192, 203, 0.8)',
+        leftStart: 'rgba(0, 255, 255, 0.8)',
+        rightStart: 'rgba(0, 255, 255, 0.8)',
+        letter: 'rgba(255, 255, 0, 0.8)'
+      };
+      return colors[lineType] || 'rgba(0, 123, 255, 0.8)';
+    };
+    
+    const getLineLabel = (lineType) => {
+      const labels = {
+        headerEnd: 'Header',
+        footerStart: 'Footer',
+        textLine: 'Text',
+        baseline: 'Base',
+        topLine: 'Top',
+        leftStart: 'Left',
+        rightStart: 'Right'
+      };
+      return labels[lineType] || lineType;
+    };
+    
+    // Re-render lines when state changes
+    useEffect(() => {
+      renderAllLines();
+    }, [renderAllLines]);
+    
+    // Setup overlay canvas dimensions
+    useEffect(() => {
+      const canvas = overlayCanvasRef.current;
+      const mainCanvas = appState.image.canvas;
+      
+      if (canvas && mainCanvas) {
+        canvas.width = mainCanvas.width;
+        canvas.height = mainCanvas.height;
+        renderAllLines();
+      }
+    }, [appState.image.canvas, renderAllLines]);
+    
+    return {
+      overlayCanvasRef,
+      drawPreviewLine,
+      placeLine,
+      addLetterLine,
+      updateLinePosition,
+      renderAllLines
+    };
+  };
+  ```
+  - Complete line management with preview and placement
+  - Bounds validation and error handling
+  - Line labels and visual feedback
+  - Letter lines with duplicate prevention
 
-## Manual Input Synchronization
+### Line Selection Styling
+- [ ] **Add CSS for line selection controls**
+  ```css
+  .line-controls {
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    margin-bottom: 20px;
+  }
+  
+  .line-controls.disabled {
+    opacity: 0.6;
+    text-align: center;
+    color: #666;
+  }
+  
+  .line-controls-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  
+  .line-controls-header h3 {
+    margin: 0;
+    color: #333;
+  }
+  
+  .line-types-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .line-control-item {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 15px;
+  }
+  
+  .line-control-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  
+  .line-color-indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    margin-right: 8px;
+    border: 1px solid #ccc;
+  }
+  
+  .line-control-header label {
+    font-weight: 500;
+    margin: 0;
+  }
+  
+  .required {
+    color: #dc3545;
+    font-weight: bold;
+  }
+  
+  .line-control-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  
+  .coordinate-input {
+    width: 80px;
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: monospace;
+  }
+  
+  .line-status {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #28a745;
+    font-family: monospace;
+  }
+  
+  .letter-lines-section {
+    border-top: 1px solid #ddd;
+    padding-top: 20px;
+  }
+  
+  .letter-lines-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+  }
+  
+  .letter-lines-header h4 {
+    margin: 0;
+    color: #333;
+  }
+  
+  .letter-lines-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  
+  .letter-line-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-family: monospace;
+  }
+  
+  .letter-lines-instructions {
+    background: #d1ecf1;
+    border: 1px solid #bee5eb;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 14px;
+    color: #0c5460;
+  }
+  
+  .btn-xs {
+    padding: 2px 6px;
+    font-size: 11px;
+    line-height: 1;
+  }
+  ```
+  - Grid layout for line controls
+  - Color indicators for each line type
+  - Status feedback and validation styling
+  - Letter lines management interface
 
-### Number Input Handlers
-- [ ] Add event listeners to all number inputs
-- [ ] Implement input validation (non-negative integers)
-- [ ] Update line positions when input values change
-- [ ] Sync input values with placed line coordinates
-- [ ] Update canvas display when inputs change
-- [ ] Handle invalid input values gracefully
+## React Manual Input Synchronization
 
-### Real-time Updates
-- [ ] Update appState when input values change
-- [ ] Redraw lines immediately when inputs are modified
-- [ ] Maintain consistency between visual lines and stored coordinates
-- [ ] Validate coordinate bounds (within image dimensions)
+### Controlled Input Components
+- [ ] **Implement controlled inputs with React state synchronization**
+  ```jsx
+  // Already implemented in LineControls component
+  // Manual inputs are automatically synchronized with React state
+  const handleManualInput = useCallback((lineType, value) => {
+    const numValue = parseInt(value);
+    if (isNaN(numValue) || numValue < 0) return;
+    
+    // Validate bounds
+    const maxValue = lineType.includes('Start') || lineType === 'letterLines' 
+      ? appState.image.width 
+      : appState.image.height;
+    
+    if (numValue > maxValue) return;
+    
+    updateAppState({
+      lines: { [lineType]: numValue }
+    });
+  }, [appState.image, updateAppState]);
+  ```
+  - React controlled inputs automatically sync with state
+  - Real-time validation and bounds checking
+  - Immediate visual feedback through state updates
 
-## Data Export Implementation
+### Input Validation Hook
+- [ ] **Create useInputValidation hook for coordinate validation**
+  ```jsx
+  // src/hooks/useInputValidation.js
+  import { useCallback, useMemo } from 'react';
+  
+  export const useInputValidation = (appState) => {
+    const validateCoordinate = useCallback((value, type, lineType) => {
+      // Convert to number
+      const numValue = parseFloat(value);
+      
+      // Check if it's a valid number
+      if (isNaN(numValue)) {
+        return { isValid: false, error: 'Must be a number' };
+      }
+      
+      // Check if it's non-negative
+      if (numValue < 0) {
+        return { isValid: false, error: 'Must be non-negative' };
+      }
+      
+      // Check bounds based on type
+      const maxValue = type === 'vertical' 
+        ? appState.image.width 
+        : appState.image.height;
+      
+      if (numValue > maxValue) {
+        return { 
+          isValid: false, 
+          error: `Must be ≤ ${maxValue} (image ${type === 'vertical' ? 'width' : 'height'})` 
+        };
+      }
+      
+      // Check logical constraints
+      const logicalError = validateLogicalConstraints(numValue, lineType, appState.lines);
+      if (logicalError) {
+        return { isValid: false, error: logicalError };
+      }
+      
+      return { isValid: true, value: Math.floor(numValue) };
+    }, [appState.image, appState.lines]);
+    
+    const validateLogicalConstraints = useCallback((value, lineType, lines) => {
+      // Header end should be before footer start
+      if (lineType === 'headerEnd' && lines.footerStart !== null && value >= lines.footerStart) {
+        return 'Header end must be above footer start';
+      }
+      
+      if (lineType === 'footerStart' && lines.headerEnd !== null && value <= lines.headerEnd) {
+        return 'Footer start must be below header end';
+      }
+      
+      // Text line should be between header and footer
+      if (lineType === 'textLine') {
+        if (lines.headerEnd !== null && value <= lines.headerEnd) {
+          return 'Text line must be below header end';
+        }
+        if (lines.footerStart !== null && value >= lines.footerStart) {
+          return 'Text line must be above footer start';
+        }
+      }
+      
+      // Top line should be above header end
+      if (lineType === 'topLine' && lines.headerEnd !== null && value >= lines.headerEnd) {
+        return 'Top line must be above header end';
+      }
+      
+      // Baseline should be below footer start
+      if (lineType === 'baseline' && lines.footerStart !== null && value <= lines.footerStart) {
+        return 'Baseline must be below footer start';
+      }
+      
+      // Left start should be before right start
+      if (lineType === 'leftStart' && lines.rightStart !== null && value >= lines.rightStart) {
+        return 'Left start must be left of right start';
+      }
+      
+      if (lineType === 'rightStart' && lines.leftStart !== null && value <= lines.leftStart) {
+        return 'Right start must be right of left start';
+      }
+      
+      return null;
+    }, []);
+    
+    const getValidationErrors = useCallback(() => {
+      const errors = [];
+      
+      // Check required fields
+      if (!appState.ui.name.trim()) {
+        errors.push('Name is required');
+      }
+      
+      if (appState.lines.headerEnd === null) {
+        errors.push('Header end line is required');
+      }
+      
+      if (appState.lines.footerStart === null) {
+        errors.push('Footer start line is required');
+      }
+      
+      if (appState.lines.textLine === null) {
+        errors.push('Text line is required');
+      }
+      
+      if (!appState.settings.backgroundRemoved) {
+        errors.push('Background removal is required');
+      }
+      
+      return errors;
+    }, [appState]);
+    
+    const isReadyForExport = useMemo(() => {
+      return getValidationErrors().length === 0;
+    }, [getValidationErrors]);
+    
+    return {
+      validateCoordinate,
+      getValidationErrors,
+      isReadyForExport
+    };
+  };
+  ```
+  - Comprehensive coordinate validation with bounds checking
+  - Logical constraint validation (e.g., header before footer)
+  - Export readiness validation
 
-### Data Collection
-- [ ] Implement `collectData()` function to gather all application state
-- [ ] Calculate `fontSize` as textLine - (topLine ?? headerBottom)
-- [ ] Format coordinates according to stamp file specification
-- [ ] Validate that all required data is present
-- [ ] Handle optional fields (baseline, topLine) with defaults
+## React JSON Export Implementation
 
-### JSON Export
-- [ ] Implement `exportToJSON()` function
-- [ ] Create stamp file object with correct structure
-- [ ] Set `type` field to "SYNDICATE" (hard-coded)
-- [ ] Set `referenceHeight` to image height
-- [ ] Map line coordinates to stamp file format
-- [ ] Convert processed image to base64 string
-- [ ] Set `offset` to {x: 0, y: 0} (hard-coded)
+### Export Controls Component
+- [ ] **Create ExportControls React component**
+  ```jsx
+  // src/components/ExportControls.jsx
+  import React, { useCallback, useState } from 'react';
+  import { useInputValidation } from '../hooks/useInputValidation';
+  import { useImageProcessor } from '../hooks/useImageProcessor';
+  
+  export const ExportControls = ({ appState, updateAppState }) => {
+    const [isExporting, setIsExporting] = useState(false);
+    const [exportError, setExportError] = useState(null);
+    const { getValidationErrors, isReadyForExport } = useInputValidation(appState);
+    const { getBase64ImageData } = useImageProcessor(appState, updateAppState);
+    
+    const handleNameChange = useCallback((e) => {
+      updateAppState({
+        ui: { name: e.target.value }
+      });
+    }, [updateAppState]);
+    
+    const handleExport = useCallback(async () => {
+      setIsExporting(true);
+      setExportError(null);
+      
+      try {
+        // Validate before export
+        const errors = getValidationErrors();
+        if (errors.length > 0) {
+          throw new Error(`Validation failed: ${errors.join(', ')}`);
+        }
+        
+        // Collect and format data
+        const stampData = collectStampData(appState, getBase64ImageData);
+        
+        // Create and download JSON file
+        const jsonString = JSON.stringify(stampData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const filename = `stamp_${appState.ui.name.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        URL.revokeObjectURL(url);
+        
+        console.log('Export successful:', filename);
+        
+      } catch (error) {
+        console.error('Export failed:', error);
+        setExportError(error.message);
+      } finally {
+        setIsExporting(false);
+      }
+    }, [appState, getValidationErrors, getBase64ImageData]);
+    
+    const validationErrors = getValidationErrors();
+    
+    return (
+      <div className="export-controls">
+        <div className="export-controls-header">
+          <h3>Export Stamp File</h3>
+        </div>
+        
+        <div className="name-input-group">
+          <label htmlFor="stamp-name">Stamp Name *</label>
+          <input
+            id="stamp-name"
+            type="text"
+            value={appState.ui.name}
+            onChange={handleNameChange}
+            placeholder="Enter stamp name"
+            className="name-input"
+            required
+          />
+        </div>
+        
+        {validationErrors.length > 0 && (
+          <div className="validation-errors">
+            <h4>Please fix the following issues:</h4>
+            <ul>
+              {validationErrors.map((error, index) => (
+                <li key={index}>{error}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        {exportError && (
+          <div className="export-error">
+            ⚠️ Export failed: {exportError}
+          </div>
+        )}
+        
+        <div className="export-actions">
+          <button
+            onClick={handleExport}
+            disabled={!isReadyForExport || isExporting}
+            className={`btn btn-lg ${
+              isReadyForExport ? 'btn-success' : 'btn-secondary'
+            }`}
+          >
+            {isExporting ? 'Exporting...' : 'Export Stamp File'}
+          </button>
+        </div>
+        
+        {isReadyForExport && (
+          <div className="export-preview">
+            <h4>Export Preview</h4>
+            <div className="preview-data">
+              <div>Name: {appState.ui.name}</div>
+              <div>Type: SYNDICATE</div>
+              <div>Reference Height: {appState.image.height}</div>
+              <div>Header Bottom: {appState.lines.headerEnd}</div>
+              <div>Footer Top: {appState.lines.footerStart}</div>
+              <div>Font Size: {calculateFontSize(appState.lines)}</div>
+              {appState.lines.leftStart !== null && (
+                <div>Left Start: {appState.lines.leftStart}</div>
+              )}
+              {appState.lines.rightStart !== null && (
+                <div>Right Start: {appState.lines.rightStart}</div>
+              )}
+              {appState.lines.letterLines.length > 0 && (
+                <div>Letter Lines: {appState.lines.letterLines.length} lines</div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+  
+  // Helper function to collect stamp data
+  const collectStampData = (appState, getBase64ImageData) => {
+    const lines = appState.lines;
+    
+    // Calculate defaults for optional fields
+    const topLine = lines.topLine ?? (lines.headerEnd - 1);
+    const baseline = lines.baseline ?? (lines.footerStart + 1);
+    
+    // Calculate font size
+    const fontSize = lines.textLine - topLine;
+    
+    // Build base coordinate array
+    const baseCoordinate = [lines.textLine];
+    
+    // Get image data
+    const imageData = getBase64ImageData();
+    if (!imageData) {
+      throw new Error('Failed to get image data');
+    }
+    
+    return {
+      name: appState.ui.name,
+      type: 'SYNDICATE',
+      referenceHeight: appState.image.height,
+      headerBottom: lines.headerEnd,
+      footerTop: lines.footerStart,
+      fontSize: fontSize,
+      leftStart: lines.leftStart,
+      rightStart: lines.rightStart,
+      baseCoordinate: baseCoordinate,
+      offset: { x: 0, y: 0 },
+      imageData: imageData
+    };
+  };
+  
+  // Helper function to calculate font size
+  const calculateFontSize = (lines) => {
+    const topLine = lines.topLine ?? (lines.headerEnd - 1);
+    return lines.textLine - topLine;
+  };
+  ```
+  - Complete export functionality with validation
+  - Real-time preview of export data
+  - Error handling and user feedback
+  - Automatic filename generation
 
-### File Download
-- [ ] Create downloadable JSON file
-- [ ] Set appropriate filename (e.g., "stamp_[name].json")
-- [ ] Trigger browser download
-- [ ] Handle download errors
-- [ ] Show success/error messages to user
+### Export Data Utilities
+- [ ] **Create export utilities for data formatting**
+  ```jsx
+  // src/utils/exportUtils.js
+  
+  export const validateExportData = (appState) => {
+    const errors = [];
+    const warnings = [];
+    
+    // Required field validation
+    if (!appState.ui.name.trim()) {
+      errors.push('Stamp name is required');
+    }
+    
+    if (!appState.image.canvas) {
+      errors.push('No image loaded');
+    }
+    
+    if (!appState.settings.backgroundRemoved) {
+      errors.push('Background removal is required');
+    }
+    
+    if (appState.lines.headerEnd === null) {
+      errors.push('Header end line is required');
+    }
+    
+    if (appState.lines.footerStart === null) {
+      errors.push('Footer start line is required');
+    }
+    
+    if (appState.lines.textLine === null) {
+      errors.push('Text line is required');
+    }
+    
+    // Logical validation
+    if (appState.lines.headerEnd !== null && appState.lines.footerStart !== null) {
+      if (appState.lines.headerEnd >= appState.lines.footerStart) {
+        errors.push('Header end must be above footer start');
+      }
+    }
+    
+    if (appState.lines.textLine !== null) {
+      if (appState.lines.headerEnd !== null && appState.lines.textLine <= appState.lines.headerEnd) {
+        errors.push('Text line must be below header end');
+      }
+      if (appState.lines.footerStart !== null && appState.lines.textLine >= appState.lines.footerStart) {
+        errors.push('Text line must be above footer start');
+      }
+    }
+    
+    // Warnings for optional fields
+    if (appState.lines.leftStart === null && appState.lines.rightStart === null) {
+      warnings.push('No horizontal boundaries defined');
+    }
+    
+    if (appState.lines.letterLines.length === 0) {
+      warnings.push('No letter lines defined');
+    }
+    
+    return { errors, warnings };
+  };
+  
+  export const formatStampData = (appState, imageData) => {
+    const lines = appState.lines;
+    
+    // Calculate derived values
+    const topLine = lines.topLine ?? (lines.headerEnd - 1);
+    const baseline = lines.baseline ?? (lines.footerStart + 1);
+    const fontSize = lines.textLine - topLine;
+    
+    // Format according to stamp file specification
+    const stampData = {
+      name: appState.ui.name.trim(),
+      type: 'SYNDICATE',
+      referenceHeight: appState.image.height,
+      headerBottom: lines.headerEnd,
+      footerTop: lines.footerStart,
+      fontSize: fontSize,
+      baseCoordinate: [lines.textLine],
+      offset: { x: 0, y: 0 },
+      imageData: imageData
+    };
+    
+    // Add optional fields only if they exist
+    if (lines.leftStart !== null) {
+      stampData.leftStart = lines.leftStart;
+    }
+    
+    if (lines.rightStart !== null) {
+      stampData.rightStart = lines.rightStart;
+    }
+    
+    return stampData;
+  };
+  
+  export const downloadJSON = (data, filename) => {
+    try {
+      const jsonString = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.style.display = 'none';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      URL.revokeObjectURL(url);
+      
+      return true;
+    } catch (error) {
+      console.error('Download failed:', error);
+      return false;
+    }
+  };
+  ```
+  - Comprehensive validation with errors and warnings
+  - Proper stamp file format generation
+  - Robust file download handling
+
+### Export Styling
+- [ ] **Add CSS for export controls**
+  ```css
+  .export-controls {
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    margin-bottom: 20px;
+  }
+  
+  .export-controls-header h3 {
+    margin: 0 0 20px 0;
+    color: #333;
+  }
+  
+  .name-input-group {
+    margin-bottom: 20px;
+  }
+  
+  .name-input-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+  }
+  
+  .name-input {
+    width: 100%;
+    max-width: 300px;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+  }
+  
+  .validation-errors {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 20px;
+    color: #721c24;
+  }
+  
+  .validation-errors h4 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+  }
+  
+  .validation-errors ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+  
+  .export-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 20px;
+    color: #721c24;
+  }
+  
+  .export-actions {
+    margin-bottom: 20px;
+  }
+  
+  .export-preview {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+  }
+  
+  .export-preview h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+  }
+  
+  .preview-data {
+    font-family: monospace;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  
+  .preview-data > div {
+    margin-bottom: 4px;
+  }
+  ```
+  - Clean export interface styling
+  - Error and validation feedback
+  - Preview data formatting
 
 ## Error Handling and Validation
 
