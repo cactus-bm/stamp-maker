@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect } from 'react';
 
 interface LineSelectionProps {
   appState: any;
@@ -15,250 +15,6 @@ interface LineSelectionProps {
  * @returns {JSX.Element} Line selection component with all line types
  */
 export const LineSelection: React.FC<LineSelectionProps> = ({ appState, updateAppState }) => {
-  const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
-
-  // Draw all lines on overlay canvas
-  const drawLines = useCallback(() => {
-    const overlayCanvas = overlayCanvasRef.current;
-    const mainCanvas = document.getElementById('main-canvas') as HTMLCanvasElement;
-    
-    if (!overlayCanvas || !mainCanvas || !appState.image.dimensions) {
-      return;
-    }
-
-    // Set overlay canvas size and position to match main canvas exactly
-    const mainRect = mainCanvas.getBoundingClientRect();
-    
-    overlayCanvas.width = mainCanvas.width;
-    overlayCanvas.height = mainCanvas.height;
-    overlayCanvas.style.width = `${mainRect.width}px`;
-    overlayCanvas.style.height = `${mainRect.height}px`;
-    
-    // Position overlay exactly over main canvas using fixed positioning
-    overlayCanvas.style.left = `${mainRect.left}px`;
-    overlayCanvas.style.top = `${mainRect.top}px`;
-
-    const ctx = overlayCanvas.getContext('2d');
-    if (!ctx) return;
-
-    // Clear overlay
-    ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-
-    const { lines } = appState;
-    const { width, height } = appState.image.dimensions;
-
-    // Draw horizontal lines
-    ctx.strokeStyle = '#ff0000';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([]);
-
-    // Header bottom line
-    if (lines.headerBottom !== null) {
-      ctx.beginPath();
-      ctx.moveTo(0, lines.headerBottom);
-      ctx.lineTo(width, lines.headerBottom);
-      ctx.stroke();
-      
-      // Label
-      ctx.fillStyle = '#ff0000';
-      ctx.font = '12px Arial';
-      ctx.fillText('Header End', 5, lines.headerBottom - 5);
-    }
-
-    // Footer top line
-    if (lines.footerTop !== null) {
-      ctx.beginPath();
-      ctx.moveTo(0, lines.footerTop);
-      ctx.lineTo(width, lines.footerTop);
-      ctx.stroke();
-      
-      ctx.fillText('Footer Start', 5, lines.footerTop - 5);
-    }
-
-    // Text line
-    if (lines.textLine !== null) {
-      ctx.strokeStyle = '#00ff00';
-      ctx.beginPath();
-      ctx.moveTo(0, lines.textLine);
-      ctx.lineTo(width, lines.textLine);
-      ctx.stroke();
-      
-      ctx.fillStyle = '#00ff00';
-      ctx.fillText('Text Line', 5, lines.textLine - 5);
-    }
-
-    // Baseline
-    if (lines.baseline !== null) {
-      ctx.strokeStyle = '#0000ff';
-      ctx.beginPath();
-      ctx.moveTo(0, lines.baseline);
-      ctx.lineTo(width, lines.baseline);
-      ctx.stroke();
-      
-      ctx.fillStyle = '#0000ff';
-      ctx.fillText('Baseline', 5, lines.baseline - 5);
-    }
-
-    // Top line
-    if (lines.topLine !== null) {
-      ctx.strokeStyle = '#ff00ff';
-      ctx.beginPath();
-      ctx.moveTo(0, lines.topLine);
-      ctx.lineTo(width, lines.topLine);
-      ctx.stroke();
-      
-      ctx.fillStyle = '#ff00ff';
-      ctx.fillText('Top Line', 5, lines.topLine - 5);
-    }
-
-    // Vertical lines
-    ctx.strokeStyle = '#ffaa00';
-    
-    // Left start line
-    if (lines.leftStart !== null) {
-      ctx.beginPath();
-      ctx.moveTo(lines.leftStart, 0);
-      ctx.lineTo(lines.leftStart, height);
-      ctx.stroke();
-      
-      ctx.fillStyle = '#ffaa00';
-      ctx.save();
-      ctx.translate(lines.leftStart + 5, 15);
-      ctx.rotate(-Math.PI / 2);
-      ctx.fillText('Left Start', 0, 0);
-      ctx.restore();
-    }
-
-    // Right start line
-    if (lines.rightStart !== null) {
-      ctx.beginPath();
-      ctx.moveTo(lines.rightStart, 0);
-      ctx.lineTo(lines.rightStart, height);
-      ctx.stroke();
-      
-      ctx.fillStyle = '#ffaa00';
-      ctx.save();
-      ctx.translate(lines.rightStart + 5, 15);
-      ctx.rotate(-Math.PI / 2);
-      ctx.fillText('Right Start', 0, 0);
-      ctx.restore();
-    }
-
-    // Letter lines
-    ctx.strokeStyle = '#aa00ff';
-    ctx.setLineDash([5, 5]);
-    
-    lines.letterLines.forEach((x: number, index: number) => {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, height);
-      ctx.stroke();
-      
-      ctx.fillStyle = '#aa00ff';
-      ctx.save();
-      ctx.translate(x + 5, 30 + index * 15);
-      ctx.rotate(-Math.PI / 2);
-      ctx.fillText(`Letter ${index + 1}`, 0, 0);
-      ctx.restore();
-    });
-
-  }, [appState.lines, appState.image.dimensions]);
-
-  // Update overlay position on scroll
-  const updateOverlayPosition = useCallback(() => {
-    const overlayCanvas = overlayCanvasRef.current;
-    const mainCanvas = document.getElementById('main-canvas') as HTMLCanvasElement;
-    
-    if (!overlayCanvas || !mainCanvas) {
-      return;
-    }
-
-    const mainRect = mainCanvas.getBoundingClientRect();
-    overlayCanvas.style.left = `${mainRect.left}px`;
-    overlayCanvas.style.top = `${mainRect.top}px`;
-  }, []);
-
-  // Add scroll event listener to keep overlay positioned correctly
-  useEffect(() => {
-    const handleScroll = () => {
-      updateOverlayPosition();
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    window.addEventListener('resize', handleScroll);
-    
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleScroll);
-    };
-  }, [updateOverlayPosition]);
-
-  // Handle canvas click for line selection
-  const handleCanvasClick = useCallback((event: MouseEvent) => {
-    const canvas = event.currentTarget as HTMLCanvasElement;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    
-    const x = Math.round((event.clientX - rect.left) * scaleX);
-    const y = Math.round((event.clientY - rect.top) * scaleY);
-    
-    const { currentTool } = appState.ui;
-    
-    switch (currentTool) {
-      case 'header':
-        updateAppState({
-          lines: { ...appState.lines, headerBottom: y },
-          ui: { ...appState.ui, currentTool: 'none' }
-        });
-        break;
-      case 'footer':
-        updateAppState({
-          lines: { ...appState.lines, footerTop: y },
-          ui: { ...appState.ui, currentTool: 'none' }
-        });
-        break;
-      case 'text':
-        updateAppState({
-          lines: { ...appState.lines, textLine: y },
-          ui: { ...appState.ui, currentTool: 'none' }
-        });
-        break;
-      case 'baseline':
-        updateAppState({
-          lines: { ...appState.lines, baseline: y },
-          ui: { ...appState.ui, currentTool: 'none' }
-        });
-        break;
-      case 'top':
-        updateAppState({
-          lines: { ...appState.lines, topLine: y },
-          ui: { ...appState.ui, currentTool: 'none' }
-        });
-        break;
-      case 'left':
-        updateAppState({
-          lines: { ...appState.lines, leftStart: x },
-          ui: { ...appState.ui, currentTool: 'none' }
-        });
-        break;
-      case 'right':
-        updateAppState({
-          lines: { ...appState.lines, rightStart: x },
-          ui: { ...appState.ui, currentTool: 'none' }
-        });
-        break;
-      case 'letter':
-        updateAppState({
-          lines: { 
-            ...appState.lines, 
-            letterLines: [...appState.lines.letterLines, x].sort((a, b) => a - b)
-          },
-          ui: { ...appState.ui, currentTool: 'none' }
-        });
-        break;
-    }
-  }, [appState.lines, appState.ui, updateAppState]);
 
   // Set current tool
   const setTool = useCallback((tool: string) => {
@@ -293,45 +49,15 @@ export const LineSelection: React.FC<LineSelectionProps> = ({ appState, updateAp
     });
   }, [appState.ui, updateAppState]);
 
-  // Update overlay when lines change
-  useEffect(() => {
-    drawLines();
-  }, [drawLines]);
 
-  // Position overlay canvas over main canvas
-  useEffect(() => {
-    const overlayCanvas = overlayCanvasRef.current;
-    const mainCanvas = document.getElementById('main-canvas') as HTMLCanvasElement;
-    
-    if (overlayCanvas && mainCanvas) {
-      const mainRect = mainCanvas.getBoundingClientRect();
-      const containerRect = mainCanvas.parentElement?.getBoundingClientRect();
-      
-      if (containerRect) {
-        overlayCanvas.style.position = 'absolute';
-        overlayCanvas.style.left = `${mainRect.left - containerRect.left}px`;
-        overlayCanvas.style.top = `${mainRect.top - containerRect.top}px`;
-        overlayCanvas.style.pointerEvents = 'none';
-        overlayCanvas.style.zIndex = '10';
-      }
-    }
-  }, [appState.image.dimensions]);
+
+
 
   const hasImage = appState.image.original !== null;
   const { currentTool } = appState.ui;
   const { lines } = appState;
 
-  useEffect(() => {
-    const mainCanvas = document.getElementById('main-canvas') as HTMLCanvasElement;
-    
-    if (mainCanvas) {
-      mainCanvas.addEventListener('click', handleCanvasClick);
-      
-      return () => {
-        mainCanvas.removeEventListener('click', handleCanvasClick);
-      };
-    }
-  }, [handleCanvasClick]);
+
   return (
     <div className="line-selection-section">
       <h3>Line Selection</h3>
@@ -457,19 +183,7 @@ export const LineSelection: React.FC<LineSelectionProps> = ({ appState, updateAp
         </div>
       )}
 
-      {/* Overlay canvas for drawing lines */}
-      <canvas
-        ref={overlayCanvasRef}
-        className="line-overlay"
-        style={{ 
-          position: 'fixed',
-          pointerEvents: currentTool !== 'none' && currentTool !== 'background' ? 'auto' : 'none',
-          zIndex: 10,
-          border: '2px solid var(--border-color)',
-          borderRadius: '4px'
-        }}
-        aria-label="Line overlay for visual feedback"
-      />
+
     </div>
   );
 };

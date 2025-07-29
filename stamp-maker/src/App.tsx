@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import './App.css';
 import { FileUpload } from './components/FileUpload';
 import { BackgroundRemoval } from './components/BackgroundRemoval';
@@ -7,6 +7,7 @@ import { LineSelection } from './components/LineSelection';
 import { JsonExport } from './components/JsonExport';
 import { ManualInputs } from './components/ManualInputs';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { StampCanvas, StampCanvasRef } from './components/StampCanvas';
 
 // Application state interface
 interface AppState {
@@ -80,6 +81,7 @@ const initialState: AppState = {
 
 function App() {
   const [appState, setAppState] = useState<AppState>(initialState);
+  const stampCanvasRef = useRef<StampCanvasRef>(null);
 
   // State update function with validation
   const updateAppState = useCallback((updates: Partial<AppState> | ((prev: AppState) => AppState)) => {
@@ -88,11 +90,68 @@ function App() {
 
   // Handle canvas clicks for various tools
   const handleCanvasClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
-    // Canvas click handling is delegated to individual components
-    // This function exists to maintain the click handler structure
-    // Individual components (BackgroundRemoval, LineSelection) handle their own click events
-    console.log('Canvas clicked, current tool:', appState.ui.currentTool);
-  }, [appState.ui.currentTool]);
+    const canvas = event.currentTarget;
+    const currentTool = appState.ui.currentTool;
+    
+    if (!canvas || !appState.image.dimensions || currentTool === 'none' || currentTool === 'background') {
+      return;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = appState.image.dimensions.width / rect.width;
+    const scaleY = appState.image.dimensions.height / rect.height;
+    
+    const x = Math.round((event.clientX - rect.left) * scaleX);
+    const y = Math.round((event.clientY - rect.top) * scaleY);
+
+    // Ensure coordinates are within bounds
+    const clampedX = Math.max(0, Math.min(x, appState.image.dimensions.width - 1));
+    const clampedY = Math.max(0, Math.min(y, appState.image.dimensions.height - 1));
+
+    switch (currentTool) {
+      case 'header':
+        updateAppState({
+          lines: { ...appState.lines, headerBottom: clampedY }
+        });
+        break;
+      case 'footer':
+        updateAppState({
+          lines: { ...appState.lines, footerTop: clampedY }
+        });
+        break;
+      case 'text':
+        updateAppState({
+          lines: { ...appState.lines, textLine: clampedY }
+        });
+        break;
+      case 'baseline':
+        updateAppState({
+          lines: { ...appState.lines, baseline: clampedY }
+        });
+        break;
+      case 'top':
+        updateAppState({
+          lines: { ...appState.lines, topLine: clampedY }
+        });
+        break;
+      case 'left':
+        updateAppState({
+          lines: { ...appState.lines, leftStart: clampedX }
+        });
+        break;
+      case 'right':
+        updateAppState({
+          lines: { ...appState.lines, rightStart: clampedX }
+        });
+        break;
+      case 'letter':
+        const newLetterLines = [...appState.lines.letterLines, clampedX].sort((a, b) => a - b);
+        updateAppState({
+          lines: { ...appState.lines, letterLines: newLetterLines }
+        });
+        break;
+    }
+  }, [appState, updateAppState]);
 
   return (
     <ErrorBoundary>
@@ -109,11 +168,12 @@ function App() {
           <div className="image-workspace">
             <div className="canvas-and-zoom">
               <div className="canvas-container">
-                <canvas 
-                  id="main-canvas" 
-                  className="main-canvas"
-                  style={{ border: '1px solid #ccc' }}
+                <StampCanvas 
+                  ref={stampCanvasRef}
+                  appState={appState}
                   onClick={handleCanvasClick}
+                  className="main-canvas"
+                  style={{ position: 'relative' }}
                 />
               </div>
               
