@@ -192,25 +192,6 @@ export const JsonExport: React.FC<JsonExportProps> = ({ appState, updateAppState
     });
   }, [appState.export, updateAppState]);
 
-  // Preview export data
-  const previewData = useCallback(() => {
-    try {
-      const stampData = generateStampData();
-      console.log('Preview stamp data:', stampData);
-      
-      // Show preview in a modal or alert
-      const preview = JSON.stringify(stampData, null, 2);
-      alert(`Stamp Data Preview:\n\n${preview.substring(0, 500)}${preview.length > 500 ? '...' : ''}`);
-    } catch (error) {
-      updateAppState({
-        ui: {
-          ...appState.ui,
-          error: `Preview failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-        }
-      });
-    }
-  }, [generateStampData, updateAppState, appState.ui]);
-
   const validationErrors = validateExportData();
   const isValid = validationErrors.length === 0;
   const hasImage = appState.image.original !== null;
@@ -281,15 +262,6 @@ export const JsonExport: React.FC<JsonExportProps> = ({ appState, updateAppState
 
         <div className="export-actions">
           <button 
-            className="tool-btn"
-            onClick={previewData}
-            disabled={!hasImage || isExporting}
-            aria-label="Preview export data"
-          >
-            Preview Data
-          </button>
-          
-          <button 
             className="export-btn"
             onClick={handleExport}
             disabled={!isValid || isExporting}
@@ -297,33 +269,6 @@ export const JsonExport: React.FC<JsonExportProps> = ({ appState, updateAppState
           >
             {isExporting ? 'Exporting...' : 'Export Stamp File'}
           </button>
-        </div>
-
-        {!isValid && validationErrors.length > 0 && (
-          <div className="validation-errors">
-            <p><strong>Required before export:</strong></p>
-            <ul>
-              {validationErrors.map((error, index) => (
-                <li key={index}>{error}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <div className="export-info">
-          <h4>Export Format:</h4>
-          <p>The exported file will be in JSON format with the following structure:</p>
-          <ul>
-            <li><strong>name:</strong> Stamp identifier</li>
-            <li><strong>type:</strong> Always "SYNDICATE"</li>
-            <li><strong>headerBottom:</strong> Y-coordinate of header end</li>
-            <li><strong>footerTop:</strong> Y-coordinate of footer start</li>
-            <li><strong>fontSize:</strong> Calculated from text line spacing</li>
-            <li><strong>referenceHeight:</strong> Image height in pixels</li>
-            <li><strong>leftStart/rightStart:</strong> X-coordinates of text boundaries</li>
-            <li><strong>baseCoordinate:</strong> Letter line positions</li>
-            <li><strong>imageData:</strong> Base64-encoded PNG image</li>
-          </ul>
         </div>
       </div>
     </div>
