@@ -33,7 +33,6 @@ interface AppState {
       active: boolean;
       x: number;
       y: number;
-      scale: number;
     };
     loading: boolean;
     error: string | null;
@@ -67,8 +66,7 @@ const initialState: AppState = {
     zoom: {
       active: false,
       x: 0,
-      y: 0,
-      scale: 5,
+      y: 0
     },
     loading: false,
     error: null,
@@ -87,6 +85,10 @@ function App() {
   const updateAppState = useCallback((updates: Partial<AppState> | ((prev: AppState) => AppState)) => {
     setAppState(prevState => typeof updates === 'function' ? updates(prevState) : { ...prevState, ...updates });
   }, []);
+
+  const updateZoom = useCallback((zoom: { x: number; y: number }) => {
+    updateAppState({ ui: { ...appState.ui, ...zoom } });
+  }, [appState.ui]);
 
   // Handle canvas clicks for various tools
   const handleCanvasClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -171,11 +173,12 @@ function App() {
                   ref={stampCanvasRef}
                   lines={appState.lines}
                   image={appState.image}
+                  updateZoom={updateZoom}
                   onClick={handleCanvasClick}
                   className="main-canvas"
                   style={{ position: 'relative' }}
                 />
-              <ZoomView appState={appState} updateAppState={updateAppState} />
+              <ZoomView zoom={appState.ui.zoom} updateZoom={updateZoom} image={appState.image.original} />
             </div>
             
             <div className="line-tools">

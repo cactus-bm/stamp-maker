@@ -1,38 +1,38 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface ZoomViewProps {
-  appState: any;
-  updateAppState: (updates: any) => void;
+  zoom: { x: number; y: number };
+  updateZoom: (zoom: { x: number; y: number }) => void;
+  image: ImageData | null;
 }
 
+const ZOOM_SCALE = 10; // Fixed zoom level
+const SOURCE_SIZE = 20; // 20x20 pixel area to zoom
+const CANVAS_SIZE = 200; // Size of the zoom canvas
+
 /**
- * ZoomView Component - Provides 5x magnification for precise pixel selection
+ * ZoomView Component - Provides 10x magnification for precise pixel selection
  * 
  * @component
  * @param {Object} props - Component props
- * @param {Object} props.appState - Application state object
- * @param {Function} props.updateAppState - Function to update application state
+ * @param {{ x: number, y: number }} props.zoom - Zoom coordinates (center pixel)
+ * @param {Function} props.updateZoom - Function to update zoom coordinates
+ * @param {ImageData | null} props.image - Image data to zoom into
  * @returns {JSX.Element} Zoom view component with crosshair and pixel grid
  */
-export const ZoomView: React.FC<ZoomViewProps> = ({ appState, updateAppState }) => {
+export const ZoomView: React.FC<ZoomViewProps> = ({ zoom, updateZoom, image }) => {
   const zoomCanvasRef = useRef<HTMLCanvasElement>(null);
-  const animationFrameRef = useRef<number | undefined>(undefined);
 
-  // Update zoom view based on mouse position
-  const updateZoomView = useCallback((x: number, y: number) => {
+  // Draw the zoomed view based on current zoom coordinates
+  useEffect(() => {
     const zoomCanvas = zoomCanvasRef.current;
-    const mainCanvas = document.getElementById('main-canvas') as HTMLCanvasElement;
     
-    if (!zoomCanvas || !mainCanvas || !appState.image.original) {
+    if (!zoomCanvas || !image) {
       return;
     }
 
     const zoomCtx = zoomCanvas.getContext('2d');
-    const mainCtx = mainCanvas.getContext('2d');
-    
-    if (!zoomCtx || !mainCtx) {
-      return;
-    }
+    if (!zoomCtx) return;
 
     // Clear zoom canvas
     zoomCtx.clearRect(0, 0, zoomCanvas.width, zoomCanvas.height);
@@ -40,34 +40,51 @@ export const ZoomView: React.FC<ZoomViewProps> = ({ appState, updateAppState }) 
     // Set up pixelated rendering
     zoomCtx.imageSmoothingEnabled = false;
     
-    // Calculate source area (20x20 pixels around cursor)
-    const sourceSize = 20;
-    const sourceX = Math.max(0, Math.min(mainCanvas.width - sourceSize, x - sourceSize / 2));
-    const sourceY = Math.max(0, Math.min(mainCanvas.height - sourceSize, y - sourceSize / 2));
+    // Calculate source area (SOURCE_SIZE x SOURCE_SIZE pixels around zoom center)
+    const halfSize = Math.floor(SOURCE_SIZE / 2);
+    const sourceX = Math.max(0, Math.min(image.width - SOURCE_SIZE, zoom.x - halfSize));
+    const sourceY = Math.max(0, Math.min(image.height - SOURCE_SIZE, zoom.y - halfSize));
     
-    // Draw magnified area
-    const scale = 10; // Fixed zoom level
-    const destSize = sourceSize * scale;
+    // Calculate destination area (centered in zoom canvas)
+    const destSize = SOURCE_SIZE * ZOOM_SCALE;
     const offsetX = (zoomCanvas.width - destSize) / 2;
     const offsetY = (zoomCanvas.height - destSize) / 2;
     
     try {
-      // Get image data from main canvas
-      const imageData = mainCtx.getImageData(sourceX, sourceY, sourceSize, sourceSize);
+      // Extract the source area from the image data
+      const sourceImageData = new ImageData(SOURCE_SIZE, SOURCE_SIZE);
+      
+      for (let y = 0; y < SOURCE_SIZE; y++) {
+        for (let x = 0; x < SOURCE_SIZE; x++) {
+          const srcX = sourceX + x;
+          const srcY = sourceY + y;
+          
+          // Check bounds
+          if (srcX >= 0 && srcX < image.width && srcY >= 0 && srcY < image.height) {
+            const srcIndex = (srcY * image.width + srcX) * 4;
+            const destIndex = (y * SOURCE_SIZE + x) * 4;
+            
+            sourceImageData.data[destIndex] = image.data[srcIndex];     // R
+            sourceImageData.data[destIndex + 1] = image.data[srcIndex + 1]; // G
+            sourceImageData.data[destIndex + 2] = image.data[srcIndex + 2]; // B
+            sourceImageData.data[destIndex + 3] = image.data[srcIndex + 3]; // A
+          }
+        }
+      }
       
       // Create temporary canvas for scaling
       const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = sourceSize;
-      tempCanvas.height = sourceSize;
+      tempCanvas.width = SOURCE_SIZE;
+      tempCanvas.height = SOURCE_SIZE;
       const tempCtx = tempCanvas.getContext('2d');
       
       if (tempCtx) {
-        tempCtx.putImageData(imageData, 0, 0);
+        tempCtx.putImageData(sourceImageData, 0, 0);
         
         // Draw scaled image to zoom canvas
         zoomCtx.drawImage(
           tempCanvas,
-          0, 0, sourceSize, sourceSize,
+          0, 0, SOURCE_SIZE, SOURCE_SIZE,
           offsetX, offsetY, destSize, destSize
         );
       }
@@ -76,16 +93,18 @@ export const ZoomView: React.FC<ZoomViewProps> = ({ appState, updateAppState }) 
       zoomCtx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
       zoomCtx.lineWidth = 1;
       
-      for (let i = 0; i <= sourceSize; i++) {
-        const pos = offsetX + i * scale;
+      // Vertical grid lines
+      for (let i = 0; i <= SOURCE_SIZE; i++) {
+        const pos = offsetX + i * ZOOM_SCALE;
         zoomCtx.beginPath();
         zoomCtx.moveTo(pos, offsetY);
         zoomCtx.lineTo(pos, offsetY + destSize);
         zoomCtx.stroke();
       }
       
-      for (let i = 0; i <= sourceSize; i++) {
-        const pos = offsetY + i * scale;
+      // Horizontal grid lines
+      for (let i = 0; i <= SOURCE_SIZE; i++) {
+        const pos = offsetY + i * ZOOM_SCALE;
         zoomCtx.beginPath();
         zoomCtx.moveTo(offsetX, pos);
         zoomCtx.lineTo(offsetX + destSize, pos);
@@ -110,80 +129,12 @@ export const ZoomView: React.FC<ZoomViewProps> = ({ appState, updateAppState }) 
       zoomCtx.fillRect(5, 5, 80, 20);
       zoomCtx.fillStyle = 'white';
       zoomCtx.font = '12px monospace';
-      zoomCtx.fillText(`${x}, ${y}`, 10, 18);
+      zoomCtx.fillText(`${zoom.x}, ${zoom.y}`, 10, 18);
       
     } catch (error) {
       console.warn('Error updating zoom view:', error);
     }
-  }, [appState.image.original, appState.ui.zoom.scale]);
-
-  // Handle mouse move on main canvas
-  const handleMainCanvasMouseMove = useCallback((event: MouseEvent) => {
-    const canvas = event.target as HTMLCanvasElement;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    
-    const x = Math.round((event.clientX - rect.left) * scaleX);
-    const y = Math.round((event.clientY - rect.top) * scaleY);
-    
-    // Update zoom state
-    updateAppState({
-      ui: {
-        ...appState.ui,
-        zoom: {
-          ...appState.ui.zoom,
-          x,
-          y
-        }
-      }
-    });
-    
-    // Cancel previous animation frame
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-    
-    // Update zoom view on next frame
-    animationFrameRef.current = requestAnimationFrame(() => {
-      updateZoomView(x, y);
-    });
-  }, [appState.ui, updateAppState, updateZoomView]);
-
-  // Handle mouse leave main canvas
-  const handleMainCanvasMouseLeave = useCallback(() => {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-    
-    // Clear zoom canvas
-    const zoomCanvas = zoomCanvasRef.current;
-    if (zoomCanvas) {
-      const ctx = zoomCanvas.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, zoomCanvas.width, zoomCanvas.height);
-      }
-    }
-  }, []);
-
-  // Set up event listeners
-  useEffect(() => {
-    const mainCanvas = document.getElementById('main-canvas') as HTMLCanvasElement;
-    
-    if (mainCanvas) {
-      mainCanvas.addEventListener('mousemove', handleMainCanvasMouseMove);
-      mainCanvas.addEventListener('mouseleave', handleMainCanvasMouseLeave);
-      
-      return () => {
-        mainCanvas.removeEventListener('mousemove', handleMainCanvasMouseMove);
-        mainCanvas.removeEventListener('mouseleave', handleMainCanvasMouseLeave);
-      };
-    }
-  }, [handleMainCanvasMouseMove, handleMainCanvasMouseLeave]);
-
-
-
-  const hasImage = appState.image.original !== null;
+  }, [zoom, image]);
 
   return (
     <div className="zoom-container">
@@ -191,8 +142,8 @@ export const ZoomView: React.FC<ZoomViewProps> = ({ appState, updateAppState }) 
         <canvas 
           ref={zoomCanvasRef}
           className="zoom-canvas"
-          width={200}
-          height={200}
+          width={CANVAS_SIZE}
+          height={CANVAS_SIZE}
           style={{ 
             border: '1px solid #999',
             display: 'block'

@@ -1,9 +1,10 @@
-import React, { forwardRef, useImperativeHandle, useRef, useEffect } from 'react';
+import React, { forwardRef, useImperativeHandle, useRef, useEffect, useCallback } from 'react';
 
 interface StampCanvasProps {
     lines: any;
     image: any;
     onClick?: (event: React.MouseEvent<HTMLCanvasElement>) => void;
+    updateZoom?: (zoom: { x: number; y: number }) => void;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -21,13 +22,14 @@ export interface StampCanvasRef {
  * @param {Object} props.lines - lines to draw
  * @param {Object} props.image - image to draw
  * @param {Function} props.onClick - Optional click handler for canvas interactions
+ * @param {Function} props.updateZoom - Optional zoom update handler for mouse movement
  * @param {string} props.className - Optional CSS class name
  * @param {Object} props.style - Optional inline styles
  * @param {React.Ref} ref - Ref object exposing stamp and lines canvas elements
  * @returns {JSX.Element} Canvas component with stamp and lines canvases
  */
 export const StampCanvas = forwardRef<StampCanvasRef, StampCanvasProps>(
-  ({ lines, image, onClick, className, style }, ref) => {
+  ({ lines, image, onClick, updateZoom, className, style }, ref) => {
     const stampCanvasRef = useRef<HTMLCanvasElement>(null);
     const linesCanvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -202,6 +204,27 @@ export const StampCanvas = forwardRef<StampCanvasRef, StampCanvasProps>(
       });
     }, [lines, image.dimensions]);
 
+    // Handle mouse movement to update zoom coordinates
+    const handleMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+      if (!updateZoom || !image.dimensions) {
+        return;
+      }
+
+      const canvas = event.currentTarget;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      
+      const x = Math.round((event.clientX - rect.left) * scaleX);
+      const y = Math.round((event.clientY - rect.top) * scaleY);
+
+      // Ensure coordinates are within bounds
+      const clampedX = Math.max(0, Math.min(x, image.dimensions.width - 1));
+      const clampedY = Math.max(0, Math.min(y, image.dimensions.height - 1)); 
+
+      updateZoom({ x: clampedX, y: clampedY });
+    }, [updateZoom, image.dimensions]);
+
     return (
       <div 
         ref={containerRef}
@@ -244,6 +267,7 @@ export const StampCanvas = forwardRef<StampCanvasRef, StampCanvasProps>(
             borderRadius: '4px',
           }}
           onClick={onClick}
+          onMouseMove={handleMouseMove}
           aria-label="Lines overlay canvas"
         />
       </div>
