@@ -3,6 +3,7 @@ import React, { useCallback, useRef, useState } from 'react';
 interface FileUploadProps {
   appState: any;
   updateAppState: (updates: any) => void;
+  children?: React.ReactNode;
 }
 
 interface DragHandlers {
@@ -21,7 +22,7 @@ interface DragHandlers {
  * @param {FileUploadProps} props - Hook props
  * @returns {DragHandlers} Drag and drop event handlers for the canvas
  */
-export const FileUpload: React.FC<FileUploadProps> = ({ appState, updateAppState }) => {
+export const FileUpload: React.FC<FileUploadProps> = ({ appState, updateAppState, children }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
@@ -180,22 +181,21 @@ export const FileUpload: React.FC<FileUploadProps> = ({ appState, updateAppState
           {appState.ui.error}
         </div>
       )}
-      
       <div 
-        className={`file-upload-area ${dragOver ? 'drag-over' : ''} ${isLoading ? 'loading' : ''}`}
+        className={`file-upload-${!!children ? 'wrapper' : 'area'} ${dragOver ? 'drag-over' : ''} ${isLoading ? 'loading' : ''}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={handleClick}
+        onClick={!children ? handleClick : undefined}
         role="button"
         tabIndex={0}
         aria-label="Click to upload image or drag and drop"
-        onKeyDown={(e) => {
+        onKeyDown={!children ? (e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             handleClick();
           }
-        }}
+        } : undefined}
       >
         <input
           ref={fileInputRef}
@@ -206,7 +206,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ appState, updateAppState
           aria-label="File input for PNG images"
         />
         
-        {isLoading ? (
+        {!!children ? children : isLoading ? (
           <div>
             <p>Loading image...</p>
           </div>
@@ -233,15 +233,15 @@ export const FileUpload: React.FC<FileUploadProps> = ({ appState, updateAppState
           </div>
         )}
       </div>
-      
-      <div className="image-info">
+      {!children && <div className="image-info">
         <h4>Image Details</h4>
         <ul>
           <li><strong>File:</strong> {hasImage ? appState.image.file.name : 'No image loaded'}</li>
           <li><strong>Size:</strong> {hasImage ? `${appState.image.dimensions?.width} × ${appState.image.dimensions?.height} pixels` : 'No image loaded'}</li>
           <li><strong>File Size:</strong> {hasImage ? `${(appState.image.file.size / 1024).toFixed(1)} KB` : 'No image loaded'}</li>
         </ul>
-      </div>
+      </div>}
+      
     </div>
   );
 };

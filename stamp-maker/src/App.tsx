@@ -169,6 +169,7 @@ function App() {
           
           <div className="image-workspace">
             <div className="canvas-and-zoom">
+          <FileUpload appState={appState} updateAppState={updateAppState} >
                 <StampCanvas 
                   ref={stampCanvasRef}
                   lines={appState.lines}
@@ -178,6 +179,7 @@ function App() {
                   className="main-canvas"
                   style={{ position: 'relative' }}
                 />
+              </FileUpload>
               <ZoomView zoom={appState.ui.zoom} image={appState.image.original} />
             </div>
             

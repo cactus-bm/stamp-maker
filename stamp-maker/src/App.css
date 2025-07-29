@@ -180,6 +180,10 @@ body {
   border-color: var(--success-color);
   background-color: rgba(40, 167, 69, 0.05);
 }
+.file-upload-wrapper.drag-over {
+  border-color: var(--success-color);
+  background-color: rgba(40, 167, 69, 0.05);
+}
 
 .upload-btn {
   background-color: var(--primary-color);
