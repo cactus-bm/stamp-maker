@@ -26,11 +26,17 @@ export const LineSelection: React.FC<LineSelectionProps> = ({ appState, updateAp
       return;
     }
 
-    // Set overlay canvas size to match main canvas
+    // Set overlay canvas size and position to match main canvas exactly
+    const mainRect = mainCanvas.getBoundingClientRect();
+    
     overlayCanvas.width = mainCanvas.width;
     overlayCanvas.height = mainCanvas.height;
-    overlayCanvas.style.width = mainCanvas.style.width;
-    overlayCanvas.style.height = mainCanvas.style.height;
+    overlayCanvas.style.width = `${mainRect.width}px`;
+    overlayCanvas.style.height = `${mainRect.height}px`;
+    
+    // Position overlay exactly over main canvas using fixed positioning
+    overlayCanvas.style.left = `${mainRect.left}px`;
+    overlayCanvas.style.top = `${mainRect.top}px`;
 
     const ctx = overlayCanvas.getContext('2d');
     if (!ctx) return;
@@ -157,6 +163,35 @@ export const LineSelection: React.FC<LineSelectionProps> = ({ appState, updateAp
     });
 
   }, [appState.lines, appState.image.dimensions]);
+
+  // Update overlay position on scroll
+  const updateOverlayPosition = useCallback(() => {
+    const overlayCanvas = overlayCanvasRef.current;
+    const mainCanvas = document.getElementById('main-canvas') as HTMLCanvasElement;
+    
+    if (!overlayCanvas || !mainCanvas) {
+      return;
+    }
+
+    const mainRect = mainCanvas.getBoundingClientRect();
+    overlayCanvas.style.left = `${mainRect.left}px`;
+    overlayCanvas.style.top = `${mainRect.top}px`;
+  }, []);
+
+  // Add scroll event listener to keep overlay positioned correctly
+  useEffect(() => {
+    const handleScroll = () => {
+      updateOverlayPosition();
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('resize', handleScroll);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, [updateOverlayPosition]);
 
   // Handle canvas click for line selection
   const handleCanvasClick = useCallback((event: MouseEvent) => {
@@ -427,9 +462,11 @@ export const LineSelection: React.FC<LineSelectionProps> = ({ appState, updateAp
         ref={overlayCanvasRef}
         className="line-overlay"
         style={{ 
-          position: 'absolute',
+          position: 'fixed',
           pointerEvents: currentTool !== 'none' && currentTool !== 'background' ? 'auto' : 'none',
-          zIndex: 10
+          zIndex: 10,
+          border: '2px solid var(--border-color)',
+          borderRadius: '4px'
         }}
         aria-label="Line overlay for visual feedback"
       />
