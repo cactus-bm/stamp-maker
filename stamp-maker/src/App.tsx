@@ -87,7 +87,6 @@ function App() {
   }, []);
 
   const updateZoom = useCallback((zoom: { x: number; y: number }) => {
-    console.log('updateZoom', zoom);
     updateAppState({ ui: { ...appState.ui, zoom: { ...appState.ui.zoom, ...zoom } } });
   }, [appState.ui]);
 
