@@ -119,10 +119,6 @@ export const ZoomView: React.FC<ZoomViewProps> = ({ appState, updateAppState }) 
 
   // Handle mouse move on main canvas
   const handleMainCanvasMouseMove = useCallback((event: MouseEvent) => {
-    if (!appState.ui.zoom.active) {
-      return;
-    }
-
     const canvas = event.target as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
@@ -152,7 +148,7 @@ export const ZoomView: React.FC<ZoomViewProps> = ({ appState, updateAppState }) 
     animationFrameRef.current = requestAnimationFrame(() => {
       updateZoomView(x, y);
     });
-  }, [appState.ui.zoom.active, appState.ui, updateAppState, updateZoomView]);
+  }, [appState.ui, updateAppState, updateZoomView]);
 
   // Handle mouse leave main canvas
   const handleMainCanvasMouseLeave = useCallback(() => {
@@ -174,7 +170,7 @@ export const ZoomView: React.FC<ZoomViewProps> = ({ appState, updateAppState }) 
   useEffect(() => {
     const mainCanvas = document.getElementById('main-canvas') as HTMLCanvasElement;
     
-    if (mainCanvas && appState.ui.zoom.active) {
+    if (mainCanvas) {
       mainCanvas.addEventListener('mousemove', handleMainCanvasMouseMove);
       mainCanvas.addEventListener('mouseleave', handleMainCanvasMouseLeave);
       
@@ -183,20 +179,7 @@ export const ZoomView: React.FC<ZoomViewProps> = ({ appState, updateAppState }) 
         mainCanvas.removeEventListener('mouseleave', handleMainCanvasMouseLeave);
       };
     }
-  }, [appState.ui.zoom.active, handleMainCanvasMouseMove, handleMainCanvasMouseLeave]);
-
-  // Toggle zoom functionality
-  const toggleZoom = useCallback(() => {
-    updateAppState({
-      ui: {
-        ...appState.ui,
-        zoom: {
-          ...appState.ui.zoom,
-          active: !appState.ui.zoom.active
-        }
-      }
-    });
-  }, [appState.ui.zoom, appState.ui, updateAppState]);
+  }, [handleMainCanvasMouseMove, handleMainCanvasMouseLeave]);
 
   // Change zoom scale
   const changeZoomScale = useCallback((newScale: number) => {
@@ -212,21 +195,10 @@ export const ZoomView: React.FC<ZoomViewProps> = ({ appState, updateAppState }) 
   }, [appState.ui.zoom, appState.ui, updateAppState]);
 
   const hasImage = appState.image.original !== null;
-  const isZoomActive = appState.ui.zoom.active;
 
   return (
     <div className="zoom-container">
       <div className="zoom-controls">
-        <button 
-          className={`tool-btn ${isZoomActive ? 'active' : ''}`}
-          onClick={toggleZoom}
-          disabled={!hasImage}
-          aria-label="Toggle zoom view for precise pixel selection"
-        >
-          {isZoomActive ? 'Disable Zoom' : 'Enable Zoom'}
-        </button>
-        
-        {isZoomActive && (
           <div className="zoom-scale-controls">
             <label htmlFor="zoom-scale">Zoom Level:</label>
             <input
@@ -240,7 +212,6 @@ export const ZoomView: React.FC<ZoomViewProps> = ({ appState, updateAppState }) 
             />
             <span>{appState.ui.zoom.scale}x</span>
           </div>
-        )}
       </div>
       
       <div className="zoom-view">
@@ -251,12 +222,12 @@ export const ZoomView: React.FC<ZoomViewProps> = ({ appState, updateAppState }) 
           height={200}
           style={{ 
             border: '1px solid #999',
-            display: isZoomActive ? 'block' : 'none'
+            display: 'block'
           }}
           aria-label="Zoom view showing magnified area around cursor"
         />
         
-        {!isZoomActive && hasImage && (
+        {!hasImage && (
           <div className="zoom-placeholder">
             <p>Enable zoom for precise pixel selection</p>
           </div>
@@ -268,13 +239,6 @@ export const ZoomView: React.FC<ZoomViewProps> = ({ appState, updateAppState }) 
           </div>
         )}
       </div>
-      
-      {isZoomActive && (
-        <div className="zoom-instructions">
-          <p><strong>Zoom Active:</strong> Move mouse over image to see magnified view</p>
-          <p>Red crosshair shows exact pixel position</p>
-        </div>
-      )}
     </div>
   );
 };

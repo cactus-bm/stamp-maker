@@ -117,14 +117,10 @@ function App() {
       </header>
       
       <main className="app-main">
-        {/* Top: Long, thin file upload area */}
-        <div className="file-upload-top">
+        <div className="workspace">
           <FileUpload appState={appState} updateAppState={updateAppState} />
-        </div>
-        
-        {/* Middle: 2/3 image preview + 1/3 tool selection */}
-        <div className="main-workspace">
-          <div className="image-section">
+          
+          <div className="image-workspace">
             <div className="canvas-container">
               <canvas 
                 id="main-canvas" 
@@ -137,16 +133,15 @@ function App() {
             <ZoomView appState={appState} updateAppState={updateAppState} />
           </div>
           
-          <div className="tools-section">
+          <div className="controls-section">
             <BackgroundRemoval appState={appState} updateAppState={updateAppState} />
+            
             <LineSelection appState={appState} updateAppState={updateAppState} />
+            
+            <ManualInputs appState={appState} updateAppState={updateAppState} />
+            
+            <JsonExport appState={appState} updateAppState={updateAppState} />
           </div>
-        </div>
-        
-        {/* Bottom: Manual coordinates and remaining controls */}
-        <div className="bottom-controls">
-          <ManualInputs appState={appState} updateAppState={updateAppState} />
-          <JsonExport appState={appState} updateAppState={updateAppState} />
         </div>
       </main>
       
