@@ -189,10 +189,6 @@ function App() {
           </div>
           
           <div className="controls-section">
-            <BackgroundRemoval appState={appState} updateAppState={updateAppState} />
-            
-            <ManualInputs appState={appState} updateAppState={updateAppState} />
-            
             <JsonExport appState={appState} updateAppState={updateAppState} />
           </div>
         </div>
