@@ -226,18 +226,6 @@ export const ZoomView: React.FC<ZoomViewProps> = ({ appState, updateAppState }) 
           }}
           aria-label="Zoom view showing magnified area around cursor"
         />
-        
-        {!hasImage && (
-          <div className="zoom-placeholder">
-            <p>Enable zoom for precise pixel selection</p>
-          </div>
-        )}
-        
-        {!hasImage && (
-          <div className="zoom-placeholder">
-            <p>Load an image to use zoom</p>
-          </div>
-        )}
       </div>
     </div>
   );
