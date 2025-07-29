@@ -167,7 +167,6 @@ function App() {
           
           <div className="image-workspace">
             <div className="canvas-and-zoom">
-              <div className="canvas-container">
                 <StampCanvas 
                   ref={stampCanvasRef}
                   appState={appState}
@@ -175,8 +174,6 @@ function App() {
                   className="main-canvas"
                   style={{ position: 'relative' }}
                 />
-              </div>
-              
               <ZoomView appState={appState} updateAppState={updateAppState} />
             </div>
             
