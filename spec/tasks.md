@@ -6,7 +6,7 @@ This document contains a comprehensive checklist of tasks needed to implement th
 ## Setup and Project Structure
 
 ### React Project Setup
-- [ ] **Create React application using Create React App**
+- [x] **Create React application using Create React App**
   ```bash
   npx create-react-app stamp-maker
   cd stamp-maker
@@ -114,7 +114,7 @@ This document contains a comprehensive checklist of tasks needed to implement th
   - utils/: Pure JavaScript utilities for image processing and data export
   - styles/: Component-specific CSS files
 
-- [ ] **Create FileUpload.js component stub**
+- [x] **Create FileUpload.js component stub**
   ```jsx
   import React from 'react';
   
@@ -4409,7 +4409,7 @@ This document contains a comprehensive checklist of tasks needed to implement th
    * @returns {Object} Image processing functions and state
    * @returns {React.RefObject} returns.canvasRef - Canvas element reference
    * @returns {Function} returns.loadImage - Loads image file to canvas
-   * @returns {Function} returns.processBackgroundRemoval - Removes background using color-to-alpha
+   * @returns {Function} returns.processBackgroundRemoval - [x] Add 'Remove background' button and implement color-to-alpha (remove white)
    * @returns {Function} returns.getBase64ImageData - Exports image as base64 string
    * 
    * @example
