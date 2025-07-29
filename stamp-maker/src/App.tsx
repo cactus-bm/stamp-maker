@@ -121,22 +121,26 @@ function App() {
           <FileUpload appState={appState} updateAppState={updateAppState} />
           
           <div className="image-workspace">
-            <div className="canvas-container">
-              <canvas 
-                id="main-canvas" 
-                className="main-canvas"
-                style={{ border: '1px solid #ccc' }}
-                onClick={handleCanvasClick}
-              />
+            <div className="canvas-and-zoom">
+              <div className="canvas-container">
+                <canvas 
+                  id="main-canvas" 
+                  className="main-canvas"
+                  style={{ border: '1px solid #ccc' }}
+                  onClick={handleCanvasClick}
+                />
+              </div>
+              
+              <ZoomView appState={appState} updateAppState={updateAppState} />
             </div>
             
-            <ZoomView appState={appState} updateAppState={updateAppState} />
+            <div className="line-tools">
+              <LineSelection appState={appState} updateAppState={updateAppState} />
+            </div>
           </div>
           
           <div className="controls-section">
             <BackgroundRemoval appState={appState} updateAppState={updateAppState} />
-            
-            <LineSelection appState={appState} updateAppState={updateAppState} />
             
             <ManualInputs appState={appState} updateAppState={updateAppState} />
             

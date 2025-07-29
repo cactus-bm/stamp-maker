@@ -135,6 +135,26 @@ body {
   min-width: 300px;
 }
 
+/* Image workspace with canvas and line tools side by side */
+.image-workspace {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-direction: row;
+}
+
+.canvas-and-zoom {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.line-tools {
+  flex: 1;
+  min-width: 250px;
+  max-width: 350px;
+}
+
 /* Upload section */
 .upload-section {
   display: flex;
@@ -183,16 +203,7 @@ body {
   cursor: not-allowed;
 }
 
-/* Image workspace */
-.image-workspace {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-  background-color: white;
-  border-radius: var(--border-radius);
-  padding: var(--spacing-lg);
-  box-shadow: var(--box-shadow);
-}
+/* Image workspace - removed conflicting rule, using the one defined earlier */
 
 .canvas-container {
   flex: 1;
