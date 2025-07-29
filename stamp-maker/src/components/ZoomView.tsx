@@ -46,7 +46,7 @@ export const ZoomView: React.FC<ZoomViewProps> = ({ appState, updateAppState }) 
     const sourceY = Math.max(0, Math.min(mainCanvas.height - sourceSize, y - sourceSize / 2));
     
     // Draw magnified area
-    const scale = appState.ui.zoom.scale;
+    const scale = 10; // Fixed zoom level
     const destSize = sourceSize * scale;
     const offsetX = (zoomCanvas.width - destSize) / 2;
     const offsetY = (zoomCanvas.height - destSize) / 2;
@@ -181,39 +181,12 @@ export const ZoomView: React.FC<ZoomViewProps> = ({ appState, updateAppState }) 
     }
   }, [handleMainCanvasMouseMove, handleMainCanvasMouseLeave]);
 
-  // Change zoom scale
-  const changeZoomScale = useCallback((newScale: number) => {
-    updateAppState({
-      ui: {
-        ...appState.ui,
-        zoom: {
-          ...appState.ui.zoom,
-          scale: Math.max(2, Math.min(10, newScale))
-        }
-      }
-    });
-  }, [appState.ui.zoom, appState.ui, updateAppState]);
+
 
   const hasImage = appState.image.original !== null;
 
   return (
     <div className="zoom-container">
-      <div className="zoom-controls">
-          <div className="zoom-scale-controls">
-            <label htmlFor="zoom-scale">Zoom Level:</label>
-            <input
-              id="zoom-scale"
-              type="range"
-              min="2"
-              max="10"
-              value={appState.ui.zoom.scale}
-              onChange={(e) => changeZoomScale(parseInt(e.target.value))}
-              aria-label="Zoom scale from 2x to 10x"
-            />
-            <span>{appState.ui.zoom.scale}x</span>
-          </div>
-      </div>
-      
       <div className="zoom-view">
         <canvas 
           ref={zoomCanvasRef}
