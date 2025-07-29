@@ -83,21 +83,7 @@ function App() {
 
   // State update function with validation
   const updateAppState = useCallback((updates: Partial<AppState> | ((prev: AppState) => AppState)) => {
-    setAppState(prevState => {
-      const newState = typeof updates === 'function' ? updates(prevState) : { ...prevState, ...updates };
-      
-      // Validate state consistency
-      if (newState.lines && newState.image.dimensions) {
-        const { height } = newState.image.dimensions;
-        Object.entries(newState.lines).forEach(([key, value]) => {
-          if (typeof value === 'number' && (value < 0 || value > height)) {
-            console.warn(`Invalid line position for ${key}: ${value}`);
-          }
-        });
-      }
-      
-      return newState;
-    });
+    setAppState(prevState => typeof updates === 'function' ? updates(prevState) : { ...prevState, ...updates });
   }, []);
 
   // Handle canvas clicks for various tools
