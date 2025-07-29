@@ -56,7 +56,7 @@ export const JsonExport: React.FC<JsonExportProps> = ({ appState, updateAppState
     return errors;
   }, [appState]);
 
-  // Convert image to base64 data URL
+  // Convert image to base64 data (without data URL prefix)
   const getImageDataUrl = useCallback((): string => {
     const canvas = document.getElementById('main-canvas') as HTMLCanvasElement;
     if (!canvas) {
@@ -72,7 +72,10 @@ export const JsonExport: React.FC<JsonExportProps> = ({ appState, updateAppState
       }
     }
     
-    return canvas.toDataURL('image/png');
+    // Get data URL and extract only the base64 data after the comma
+    const dataUrl = canvas.toDataURL('image/png');
+    const base64Data = dataUrl.split(',')[1]; // Remove "data:image/png;base64," prefix
+    return base64Data;
   }, [appState.image]);
 
   // Generate stamp file data according to the specification
@@ -84,15 +87,15 @@ export const JsonExport: React.FC<JsonExportProps> = ({ appState, updateAppState
     }
 
     // Calculate fontSize based on the distance between baseline and text line
-    const fontSize = lines.baseline && lines.textLine 
-      ? Math.abs(lines.baseline - lines.textLine)
+    const fontSize = lines.topLine && lines.textLine 
+      ? Math.abs(lines.topLine - lines.textLine)
       : 32; // Default font size
 
     // Generate base coordinates from letter lines
     const baseCoordinate = [
       lines.letterLines.map((x: number) => ({
         x: x,
-        y: lines.baseline || 0
+        y: lines.textLine || 0
       }))
     ];
 
@@ -106,11 +109,11 @@ export const JsonExport: React.FC<JsonExportProps> = ({ appState, updateAppState
       referenceHeight: image.dimensions.height,
       leftStart: [{
         x: lines.leftStart,
-        y: lines.baseline || 0
+        y: lines.textLine || 0
       }],
       rightStart: [{
         x: lines.rightStart,
-        y: lines.baseline || 0
+        y: lines.textLine || 0
       }],
       baseCoordinate: baseCoordinate,
       offset: { x: 0, y: 0 },
