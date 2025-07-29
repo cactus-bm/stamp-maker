@@ -234,14 +234,14 @@ export const FileUpload: React.FC<FileUploadProps> = ({ appState, updateAppState
         )}
       </div>
       
-      {hasImage && (
-        <div className="image-info">
-          <h4>Image Details</h4>
-          <p><strong>File:</strong> {appState.image.file.name}</p>
-          <p><strong>Size:</strong> {appState.image.dimensions?.width} × {appState.image.dimensions?.height} pixels</p>
-          <p><strong>File Size:</strong> {(appState.image.file.size / 1024).toFixed(1)} KB</p>
-        </div>
-      )}
+      <div className="image-info">
+        <h4>Image Details</h4>
+        <ul>
+          <li><strong>File:</strong> {hasImage ? appState.image.file.name : 'No image loaded'}</li>
+          <li><strong>Size:</strong> {hasImage ? `${appState.image.dimensions?.width} × ${appState.image.dimensions?.height} pixels` : 'No image loaded'}</li>
+          <li><strong>File Size:</strong> {hasImage ? `${(appState.image.file.size / 1024).toFixed(1)} KB` : 'No image loaded'}</li>
+        </ul>
+      </div>
     </div>
   );
 };
