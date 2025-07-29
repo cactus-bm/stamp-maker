@@ -169,7 +169,8 @@ function App() {
             <div className="canvas-and-zoom">
                 <StampCanvas 
                   ref={stampCanvasRef}
-                  appState={appState}
+                  lines={appState.lines}
+                  image={appState.image}
                   onClick={handleCanvasClick}
                   className="main-canvas"
                   style={{ position: 'relative' }}

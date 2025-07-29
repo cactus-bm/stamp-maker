@@ -1,8 +1,9 @@
 import React, { forwardRef, useImperativeHandle, useRef, useEffect } from 'react';
 
 interface StampCanvasProps {
-  appState: any;
-  onClick?: (event: React.MouseEvent<HTMLCanvasElement>) => void;
+    lines: any;
+    image: any;
+    onClick?: (event: React.MouseEvent<HTMLCanvasElement>) => void;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -17,7 +18,8 @@ export interface StampCanvasRef {
  * 
  * @component
  * @param {Object} props - Component props
- * @param {Object} props.appState - Application state object
+ * @param {Object} props.lines - lines to draw
+ * @param {Object} props.image - image to draw
  * @param {Function} props.onClick - Optional click handler for canvas interactions
  * @param {string} props.className - Optional CSS class name
  * @param {Object} props.style - Optional inline styles
@@ -25,7 +27,7 @@ export interface StampCanvasRef {
  * @returns {JSX.Element} Canvas component with stamp and lines canvases
  */
 export const StampCanvas = forwardRef<StampCanvasRef, StampCanvasProps>(
-  ({ appState, onClick, className, style }, ref) => {
+  ({ lines, image, onClick, className, style }, ref) => {
     const stampCanvasRef = useRef<HTMLCanvasElement>(null);
     const linesCanvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -36,46 +38,43 @@ export const StampCanvas = forwardRef<StampCanvasRef, StampCanvasProps>(
       lines: linesCanvasRef.current,
     }), []);
 
-    // Update canvas dimensions when image dimensions change
+    // Update canvas dimensions and draw image
     useEffect(() => {
       const stampCanvas = stampCanvasRef.current;
       const linesCanvas = linesCanvasRef.current;
       
-      if (!stampCanvas || !linesCanvas || !appState.image.dimensions) {
+      if (!stampCanvas || !linesCanvas || !image.dimensions) {
         return;
       }
 
-      const { width, height } = appState.image.dimensions;
+      const { width, height } = image.dimensions;
       
       // Set canvas dimensions to actual image size
       stampCanvas.width = width;
       stampCanvas.height = height;
       linesCanvas.width = width;
       linesCanvas.height = height;
-      
-    }, [appState.image.dimensions]);
 
-    // Draw the stamp image on the stamp canvas
-    useEffect(() => {
-      const stampCanvas = stampCanvasRef.current;
-      if (!stampCanvas || !appState.image.processed) {
-        return;
+      const imageToDraw = image.processed || image.original;
+      
+      // Draw the processed image if available
+      if (imageToDraw) {
+        const ctx = stampCanvas.getContext('2d');
+        if (ctx) {
+          // Clear canvas
+          ctx.clearRect(0, 0, stampCanvas.width, stampCanvas.height);
+          
+          // Draw the processed image
+          ctx.putImageData(imageToDraw, 0, 0);
+        }
       }
-
-      const ctx = stampCanvas.getContext('2d');
-      if (!ctx) return;
-
-      // Clear canvas
-      ctx.clearRect(0, 0, stampCanvas.width, stampCanvas.height);
       
-      // Draw the processed image
-      ctx.putImageData(appState.image.processed, 0, 0);
-    }, [appState.image.processed]);
+    }, [image, image.dimensions, image.processed, stampCanvasRef, linesCanvasRef, stampCanvasRef.current, linesCanvasRef.current]);
 
     // Draw lines on the lines canvas
     useEffect(() => {
       const linesCanvas = linesCanvasRef.current;
-      if (!linesCanvas || !appState.image.dimensions) {
+      if (!linesCanvas || !image.dimensions) {
         return;
       }
 
@@ -85,8 +84,7 @@ export const StampCanvas = forwardRef<StampCanvasRef, StampCanvasProps>(
       // Clear canvas
       ctx.clearRect(0, 0, linesCanvas.width, linesCanvas.height);
 
-      const { lines } = appState;
-      const { width, height } = appState.image.dimensions;
+      const { width, height } = image.dimensions;
 
       // Draw horizontal lines
       ctx.lineWidth = 2;
@@ -202,7 +200,7 @@ export const StampCanvas = forwardRef<StampCanvasRef, StampCanvasProps>(
         ctx.fillText(`Letter ${index + 1}`, 0, 0);
         ctx.restore();
       });
-    }, [appState.lines, appState.image.dimensions]);
+    }, [lines, image.dimensions]);
 
     return (
       <div 
