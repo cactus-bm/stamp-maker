@@ -28,6 +28,7 @@ export const StampCanvas = forwardRef<StampCanvasRef, StampCanvasProps>(
   ({ appState, onClick, className, style }, ref) => {
     const stampCanvasRef = useRef<HTMLCanvasElement>(null);
     const linesCanvasRef = useRef<HTMLCanvasElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     // Expose both canvases through the ref
     useImperativeHandle(ref, () => ({
@@ -46,38 +47,11 @@ export const StampCanvas = forwardRef<StampCanvasRef, StampCanvasProps>(
 
       const { width, height } = appState.image.dimensions;
       
-      // Set canvas dimensions
+      // Set canvas dimensions to actual image size
       stampCanvas.width = width;
       stampCanvas.height = height;
       linesCanvas.width = width;
       linesCanvas.height = height;
-      
-      // Calculate display size to fit container while maintaining aspect ratio
-      const maxWidth = 800;
-      const maxHeight = 600;
-      const aspectRatio = width / height;
-      
-      let displayWidth = width;
-      let displayHeight = height;
-      
-      if (width > maxWidth) {
-        displayWidth = maxWidth;
-        displayHeight = maxWidth / aspectRatio;
-      }
-      
-      if (displayHeight > maxHeight) {
-        displayHeight = maxHeight;
-        displayWidth = maxHeight * aspectRatio;
-      }
-      
-      // Apply display size to both canvases
-      const canvasStyle = {
-        width: `${displayWidth}px`,
-        height: `${displayHeight}px`,
-      };
-      
-      Object.assign(stampCanvas.style, canvasStyle);
-      Object.assign(linesCanvas.style, canvasStyle);
       
     }, [appState.image.dimensions]);
 
@@ -231,13 +205,27 @@ export const StampCanvas = forwardRef<StampCanvasRef, StampCanvasProps>(
     }, [appState.lines, appState.image.dimensions]);
 
     return (
-      <div className={`stamp-canvas-container ${className || ''}`} style={style}>
+      <div 
+        ref={containerRef}
+        className={`stamp-canvas-container ${className || ''}`} 
+        style={{
+          position: 'relative',
+          display: 'inline-block',
+          minHeight: '400px',
+          minWidth: '800px',
+          ...style
+        }}
+      >
         <canvas
           ref={stampCanvasRef}
           id="main-canvas"
           className="stamp-canvas"
           style={{
             position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
             border: '1px solid #ccc',
             borderRadius: '4px',
             zIndex: 1,
@@ -249,6 +237,10 @@ export const StampCanvas = forwardRef<StampCanvasRef, StampCanvasProps>(
           className="lines-canvas"
           style={{
             position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
             pointerEvents: 'auto',
             zIndex: 2,
             borderRadius: '4px',
