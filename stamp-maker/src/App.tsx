@@ -87,7 +87,8 @@ function App() {
   }, []);
 
   const updateZoom = useCallback((zoom: { x: number; y: number }) => {
-    updateAppState({ ui: { ...appState.ui, ...zoom } });
+    console.log('updateZoom', zoom);
+    updateAppState({ ui: { ...appState.ui, zoom: { ...appState.ui.zoom, ...zoom } } });
   }, [appState.ui]);
 
   // Handle canvas clicks for various tools
@@ -178,7 +179,7 @@ function App() {
                   className="main-canvas"
                   style={{ position: 'relative' }}
                 />
-              <ZoomView zoom={appState.ui.zoom} updateZoom={updateZoom} image={appState.image.original} />
+              <ZoomView zoom={appState.ui.zoom} image={appState.image.original} />
             </div>
             
             <div className="line-tools">

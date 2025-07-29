@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from 'react';
 
 interface ZoomViewProps {
   zoom: { x: number; y: number };
-  updateZoom: (zoom: { x: number; y: number }) => void;
   image: ImageData | null;
 }
 
@@ -16,11 +15,10 @@ const CANVAS_SIZE = 200; // Size of the zoom canvas
  * @component
  * @param {Object} props - Component props
  * @param {{ x: number, y: number }} props.zoom - Zoom coordinates (center pixel)
- * @param {Function} props.updateZoom - Function to update zoom coordinates
  * @param {ImageData | null} props.image - Image data to zoom into
  * @returns {JSX.Element} Zoom view component with crosshair and pixel grid
  */
-export const ZoomView: React.FC<ZoomViewProps> = ({ zoom, updateZoom, image }) => {
+export const ZoomView: React.FC<ZoomViewProps> = ({ zoom, image }) => {
   const zoomCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Draw the zoomed view based on current zoom coordinates
