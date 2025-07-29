@@ -19,19 +19,24 @@ export const LineSelection: React.FC<LineSelectionProps> = ({ appState, updateAp
 
   // Draw all lines on overlay canvas
   const drawLines = useCallback(() => {
-    const canvas = document.getElementById('main-canvas') as HTMLCanvasElement;
+    const overlayCanvas = overlayCanvasRef.current;
+    const mainCanvas = document.getElementById('main-canvas') as HTMLCanvasElement;
     
-    if (!canvas || !appState.image.dimensions) {
+    if (!overlayCanvas || !mainCanvas || !appState.image.dimensions) {
       return;
     }
 
     // Set overlay canvas size to match main canvas
+    overlayCanvas.width = mainCanvas.width;
+    overlayCanvas.height = mainCanvas.height;
+    overlayCanvas.style.width = mainCanvas.style.width;
+    overlayCanvas.style.height = mainCanvas.style.height;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = overlayCanvas.getContext('2d');
     if (!ctx) return;
 
     // Clear overlay
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
     const { lines } = appState;
     const { width, height } = appState.image.dimensions;
@@ -292,7 +297,6 @@ export const LineSelection: React.FC<LineSelectionProps> = ({ appState, updateAp
       };
     }
   }, [handleCanvasClick]);
-
   return (
     <div className="line-selection-section">
       <h3>Line Selection</h3>
@@ -417,6 +421,18 @@ export const LineSelection: React.FC<LineSelectionProps> = ({ appState, updateAp
           )}
         </div>
       )}
+
+      {/* Overlay canvas for drawing lines */}
+      <canvas
+        ref={overlayCanvasRef}
+        className="line-overlay"
+        style={{ 
+          position: 'absolute',
+          pointerEvents: currentTool !== 'none' && currentTool !== 'background' ? 'auto' : 'none',
+          zIndex: 10
+        }}
+        aria-label="Line overlay for visual feedback"
+      />
     </div>
   );
 };
