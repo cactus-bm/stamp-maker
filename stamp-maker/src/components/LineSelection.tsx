@@ -223,7 +223,7 @@ export const LineSelection: React.FC<LineSelectionProps> = ({ appState, updateAp
         });
         break;
     }
-  }, [appState.lines, appState.ui.currentTool, updateAppState]);
+  }, [appState.lines, appState.ui, updateAppState]);
 
   // Set current tool
   const setTool = useCallback((tool: string) => {

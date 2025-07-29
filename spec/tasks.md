@@ -220,6 +220,8 @@ This document contains a comprehensive checklist of tasks needed to implement th
   };
   
   // src/hooks/useLineManager.js
+  - [x] Implement header, footer, text line, baseline, and top line selection UI
+  - [x] Implement vertical line selection for leftStart and rightStart, and letter lines
   export const useLineManager = () => {
     // Custom hook for line selection
     // Manage line selection, display, and coordinate storage
@@ -230,6 +232,8 @@ This document contains a comprehensive checklist of tasks needed to implement th
   };
   
   // src/hooks/useZoomManager.js
+  - [x] Add text box for name input
+  - [x] Add save button to export data as JSON
   export const useZoomManager = () => {
     // Custom hook for zoom functionality
     // Provide 5x magnification for precise pixel selection

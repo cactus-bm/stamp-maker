@@ -3,6 +3,10 @@ import './App.css';
 import { FileUpload } from './components/FileUpload';
 import { BackgroundRemoval } from './components/BackgroundRemoval';
 import { ZoomView } from './components/ZoomView';
+import { LineSelection } from './components/LineSelection';
+import { JsonExport } from './components/JsonExport';
+import { ManualInputs } from './components/ManualInputs';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Application state interface
 interface AppState {
@@ -98,36 +102,15 @@ function App() {
 
   // Handle canvas clicks for various tools
   const handleCanvasClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = event.currentTarget;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    
-    const x = Math.round((event.clientX - rect.left) * scaleX);
-    const y = Math.round((event.clientY - rect.top) * scaleY);
-    
-    // Handle different tools
-    switch (appState.ui.currentTool) {
-      case 'background':
-        // Background removal is handled by BackgroundRemoval component
-        break;
-      case 'header':
-      case 'footer':
-      case 'text':
-      case 'baseline':
-      case 'top':
-      case 'left':
-      case 'right':
-      case 'letter':
-        // Line selection will be handled by LineSelection component
-        break;
-      default:
-        break;
-    }
+    // Canvas click handling is delegated to individual components
+    // This function exists to maintain the click handler structure
+    // Individual components (BackgroundRemoval, LineSelection) handle their own click events
+    console.log('Canvas clicked, current tool:', appState.ui.currentTool);
   }, [appState.ui.currentTool]);
 
   return (
-    <div className="stamp-maker-app">
+    <ErrorBoundary>
+      <div className="stamp-maker-app">
       <header className="app-header">
         <h1>Stamp Maker</h1>
         <p>Create stamp files from PNG images</p>
@@ -153,62 +136,11 @@ function App() {
           <div className="controls-section">
             <BackgroundRemoval appState={appState} updateAppState={updateAppState} />
             
-            <div className="tool-controls">
-              <h3>Line Selection Tools</h3>
-              <button className="tool-btn" disabled>Select Header End</button>
-              <button className="tool-btn" disabled>Select Footer Start</button>
-              <button className="tool-btn" disabled>Select Text Line</button>
-              <button className="tool-btn" disabled>Select Baseline</button>
-              <button className="tool-btn" disabled>Select Top Line</button>
-              <button className="tool-btn" disabled>Select Left Start</button>
-              <button className="tool-btn" disabled>Select Right Start</button>
-              <button className="tool-btn" disabled>Add Letter Line</button>
-            </div>
+            <LineSelection appState={appState} updateAppState={updateAppState} />
             
-            <div className="manual-inputs">
-              <h3>Manual Coordinates</h3>
-              <div className="input-group">
-                <label>Header Bottom:</label>
-                <input type="number" disabled />
-              </div>
-              <div className="input-group">
-                <label>Footer Top:</label>
-                <input type="number" disabled />
-              </div>
-              <div className="input-group">
-                <label>Text Line:</label>
-                <input type="number" disabled />
-              </div>
-              <div className="input-group">
-                <label>Baseline:</label>
-                <input type="number" disabled />
-              </div>
-              <div className="input-group">
-                <label>Top Line:</label>
-                <input type="number" disabled />
-              </div>
-              <div className="input-group">
-                <label>Left Start:</label>
-                <input type="number" disabled />
-              </div>
-              <div className="input-group">
-                <label>Right Start:</label>
-                <input type="number" disabled />
-              </div>
-            </div>
+            <ManualInputs appState={appState} updateAppState={updateAppState} />
             
-            <div className="export-section">
-              <h3>Export</h3>
-              <div className="input-group">
-                <label>Stamp Name:</label>
-                <input 
-                  type="text" 
-                  placeholder="Enter stamp name"
-                  disabled
-                />
-              </div>
-              <button className="export-btn" disabled>Export Stamp File</button>
-            </div>
+            <JsonExport appState={appState} updateAppState={updateAppState} />
           </div>
         </div>
       </main>
@@ -216,7 +148,8 @@ function App() {
       <footer className="app-footer">
         <p>Stamp Maker v1.0 - Create stamp files with precision</p>
       </footer>
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }
 

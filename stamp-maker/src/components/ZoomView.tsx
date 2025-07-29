@@ -152,7 +152,7 @@ export const ZoomView: React.FC<ZoomViewProps> = ({ appState, updateAppState }) 
     animationFrameRef.current = requestAnimationFrame(() => {
       updateZoomView(x, y);
     });
-  }, [appState.ui.zoom.active, updateAppState, updateZoomView]);
+  }, [appState.ui.zoom.active, appState.ui, updateAppState, updateZoomView]);
 
   // Handle mouse leave main canvas
   const handleMainCanvasMouseLeave = useCallback(() => {
@@ -196,7 +196,7 @@ export const ZoomView: React.FC<ZoomViewProps> = ({ appState, updateAppState }) 
         }
       }
     });
-  }, [appState.ui.zoom, updateAppState]);
+  }, [appState.ui.zoom, appState.ui, updateAppState]);
 
   // Change zoom scale
   const changeZoomScale = useCallback((newScale: number) => {
@@ -209,7 +209,7 @@ export const ZoomView: React.FC<ZoomViewProps> = ({ appState, updateAppState }) 
         }
       }
     });
-  }, [appState.ui.zoom, updateAppState]);
+  }, [appState.ui.zoom, appState.ui, updateAppState]);
 
   const hasImage = appState.image.original !== null;
   const isZoomActive = appState.ui.zoom.active;

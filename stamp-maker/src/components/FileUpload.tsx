@@ -5,14 +5,21 @@ interface FileUploadProps {
   updateAppState: (updates: any) => void;
 }
 
+interface DragHandlers {
+  onDragOver: (e: React.DragEvent) => void;
+  onDragLeave: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
+  onClick: () => void;
+}
+
 /**
- * FileUpload Component - Handles PNG file upload with drag-and-drop functionality
+ * FileUpload Hook
  * 
- * @component
- * @param {Object} props - Component props
- * @param {Object} props.appState - Application state object
- * @param {Function} props.updateAppState - Function to update application state
- * @returns {JSX.Element} File upload component with drag-and-drop area
+ * Provides drag-and-drop and click-to-upload functionality for the canvas.
+ * Validates file type and size, loads image to canvas, and updates application state.
+ * 
+ * @param {FileUploadProps} props - Hook props
+ * @returns {DragHandlers} Drag and drop event handlers for the canvas
  */
 export const FileUpload: React.FC<FileUploadProps> = ({ appState, updateAppState }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -58,7 +65,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ appState, updateAppState
         throw new Error('Could not get canvas context');
       }
 
-      img.onload = () => {
+      const originalOnload = () => {
         // Set canvas dimensions to match image
         canvas.width = img.width;
         canvas.height = img.height;
@@ -85,7 +92,15 @@ export const FileUpload: React.FC<FileUploadProps> = ({ appState, updateAppState
         });
       };
 
+      img.onload = () => {
+        // Clean up object URL
+        URL.revokeObjectURL(objectUrl);
+        // Call the original onload function
+        originalOnload();
+      };
+
       img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
         updateAppState({
           ui: { 
             ...appState.ui, 
@@ -96,14 +111,8 @@ export const FileUpload: React.FC<FileUploadProps> = ({ appState, updateAppState
       };
 
       // Create object URL and load image
-      const objectUrl = URL.createObjectURL(file);
+      const objectUrl = URL.createObjectURL(file);      
       img.src = objectUrl;
-      
-      // Clean up object URL after loading
-      img.onload = () => {
-        URL.revokeObjectURL(objectUrl);
-        img.onload(); // Call the original onload
-      };
 
     } catch (error) {
       updateAppState({
